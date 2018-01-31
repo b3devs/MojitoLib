@@ -1,0 +1,153 @@
+<!--
+ * Copyright (c) 2013 - 2014, b3devs@gmail.com
+ *
+ * Licensed under the Common Development and Distribution License (the "License"); you may not use this
+ * source code or associated Google document except in compliance with the License. You may obtain a
+ * copy of the License at
+ *
+ * http://opensource.org/licenses/cddl1.php
+ *
+ * Any modifications to this Software that You distribute or otherwise make available in Executable
+ * form must also be made available in Source Code form and that Source Code form must be distributed
+ * only under the terms of this License.
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+-->
+
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/themes/smoothness/jquery-ui.css" />
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+
+<style type="text/css">
+div.ui-datepicker{
+ font-size:10px;
+}
+
+.window_area
+{
+  font-family: Calibri;
+  font-size: Medium;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+</style>
+
+<?
+var datesJson = Utils.getPrivateCache().get(CACHE_TXN_IMPORT_WINDOW_ARGS);
+var dates = (datesJson != null && datesJson != "" ? JSON.parse(datesJson) : null);
+
+var startDate = null;
+var endDate = null;
+
+if (dates != null) {
+	startDate = new Date(dates.startDate);
+	endDate = new Date(dates.endDate);
+} else {
+	var today = new Date;
+	startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 15);
+	endDate = today;
+}
+
+var startDateStr = Utilities.formatDate(startDate, "GMT", "MM/dd/yyyy");
+var endDateStr = Utilities.formatDate(endDate, "GMT", "MM/dd/yyyy");
+
+if (Debug.enabled) Debug.log("Showing txn_import.html");
+?>
+<form class="window_area">
+
+<label for="startDate">Start date:</label><input id="startDate" type="text" value="<?!= startDateStr ?>" style="width: 100px;" />
+<table>
+<tr>
+<td>Start date:</td><td></td>
+</tr>
+<tr>
+<td>End date:</td><td><input id="endDate" type="text" value="<?!= endDateStr ?>" style="width: 100px;"/></td>
+</tr>
+<!-- 
+<tr><div style="height: 10px"></div></tr>
+<tr>
+<td colspan="2"><input id="replaceAll" type="checkbox" />Replace all</td>
+<div><input id="replaceAll" type="checkbox" value="Replace all"/></div>
+</tr>
+ -->
+</table>
+<input id="replaceAll" type="checkbox" value="Replace all"/>
+
+<!-- spacer -->
+<div style="height: 35px"></div>
+<div>
+<p style="text-align: center; margin-bottom: 0;">
+<input id="ok_button" type="submit" value="OK" onclick="onOK();" style="height: 30px; width: 75px;"/>
+&nbsp;&nbsp;
+<input id="cancel_button" type="button" value="Cancel" onclick="closeWindow();" style="height: 30px; width: 75px;"/>
+</p>
+</div>
+
+</form>
+
+<script type="text/javascript">
+$("#startDate").datepicker();
+$("#endDate").datepicker();
+
+function onOK() {
+
+  var startDate = null;
+  var endDate = null;
+
+  try
+  {
+    startDate = $.datepicker.parseDate("mm/dd/yy", document.getElementById("startDate").value);
+  }
+  catch (e)
+  {
+    alert("Invalid start date");
+    return;
+  }
+
+  try
+  {
+    endDate = $.datepicker.parseDate("mm/dd/yy", document.getElementById("endDate").value);
+    var today = new Date();
+    if (endDate > today) {
+      endDate = today;
+    }
+  }
+  catch (e)
+  {
+    alert("Invalid end date");
+    return;
+  }
+  
+  var replaceAll = document.getElementById("replaceAll").checked;
+
+  try
+  {
+    var args = {
+      // Can't use date type. Convert to long.
+      startDate : startDate.getTime(),
+      endDate : endDate.getTime(),
+      replaceExistingData : replaceAll,
+    };
+
+    document.getElementById("ok_button").disabled = true;
+
+    google.script.run.invokeFunction("MojitoLib.Ui.TxnImportWindow.onImport", args);
+    setTimeout(function() { closeWindow(); }, 3000);
+  }
+  catch (e)
+  {
+    alert(e.toString());
+    // Not much we can do. Just eat it.
+  }
+}
+
+function closeWindow() {
+  google.script.host.close();
+}
+
+</script>

@@ -1,0 +1,188 @@
+<!--
+ * Copyright (c) 2013 - 2016, b3devs@gmail.com
+ *
+ * Licensed under the Common Development and Distribution License (the "License"); you may not use this
+ * source code or associated Google document except in compliance with the License. You may obtain a
+ * copy of the License at
+ *
+ * http://opensource.org/licenses/cddl1.php
+ *
+ * Any modifications to this Software that You distribute or otherwise make available in Executable
+ * form must also be made available in Source Code form and that Source Code form must be distributed
+ * only under the terms of this License.
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+
+<style type="text/css">
+.window_area
+{
+  font-family: Calibri,Arial,Helvetica;
+  font-size: 14px;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+td
+{
+  margin: 2px;
+  padding-top: 4px;
+}
+
+input
+{
+  margin: 2px;
+  padding: 2px;
+  font-size: Small;
+}
+</style>
+
+<?
+var mintAccount = Utils.getMintLoginAccount();
+if (Debug.enabled) Debug.log("Showing manual_mint_auth.html");
+?>
+<form class="window_area">
+
+<table style='width: 100%'>
+<tr>
+<td>Mint account (email):</td><td><input id="email" type="text" value="<?!= mintAccount ?>" style="width: 250px;" /></td>
+</tr>
+<tr>
+<td style='margin-top: 10px' colspan=2>HTTP headers from mint.intuit.com (see <a target="_blank" href='http://b3devs.blogspot.com/p/mint-auth-steps.html'>these steps</a> for getting the headers):</td>
+</tr>
+<tr>
+<td colspan=2><textarea id='request_headers' style='height:220px; width: 98%; margin: 2px'></textarea></td>
+</tr>
+</table>
+
+<div id="login_error" style="visibility: hidden; text-align: center; color: red;">Authentication failed</div>
+
+<div>
+<p style="text-align: center; margin-bottom: 0;">
+<input id="ok_button" type="button" value="OK" onclick="onOK();" style="height: 30px; width: 75px;"/>
+&nbsp;&nbsp;
+<input id="cancel_button" type="button" value="Cancel" onclick="onCancel();" style="height: 30px; width: 75px;"/>
+</p>
+</div>
+
+</form>
+
+<script type="text/javascript">
+
+function onOK() {
+  try
+  {
+    var mintUserAcct = document.getElementById("email").value;
+    if (!mintUserAcct) {
+      throw 'Enter your Mint login email address';
+    }
+    
+    var reqHeaders = document.getElementById("request_headers").value;
+    if (!reqHeaders) {
+      throw 'HTTP headers from an active Mint session must be provided';
+    }
+
+    var cookies = parseCookiesFromRequestHeaders(reqHeaders);
+    var token = parseTokenFromRequestHeaders(reqHeaders);
+
+    var args = {
+      email: document.getElementById("email").value,
+      cookies: cookies,
+      token: token
+    };
+
+    document.getElementById("ok_button").disabled = true;
+    document.getElementById("login_error").style.visibility = "hidden";
+
+    google.script.run.withSuccessHandler(onLoginResult).invokeFunction("MojitoLib.Mint.Session.verifyManualAuth", args);
+  }
+  catch (e)
+  {
+    var elemError = document.getElementById("login_error");
+    elemError.innerHTML = e;
+    elemError.style.visibility = "visible";
+  }
+}
+
+function onCancel() {
+  closeWindow();
+}
+
+function onLoginResult(loginSuccess) {
+  if (loginSuccess) {
+    closeWindow();
+    return;
+  }
+
+  // Login failed. Show the "Login failed" text and set focus to the password field.
+  var elemError = document.getElementById("login_error");
+  elemError.innerHTML = 'Authentication failed.';
+  elemError.style.visibility = "visible";
+
+  document.getElementById("ok_button").disabled = false;
+  var requestHeadersField = document.getElementById("request_headers");
+  requestHeadersField.focus(); // focus() doesn't work due to security restrictions in Google's "caja" sandbox...
+}
+
+function closeWindow() {
+  google.script.host.close();
+}
+
+function parseCookiesFromRequestHeaders(reqHeaders) {
+  var headers = reqHeaders.split('\n');
+  var idx = headers.findIndex(function(hdr) {
+    return (hdr.startsWith('cookie:') || hdr.startsWith('Cookie:'));
+  });
+
+  if (idx < 0) {
+    throw 'Unable to find "cookie:" entry in HTTP headers';
+  }
+
+  var cookieHeader = headers[idx];
+  var cookies = cookieHeader.substr('cookie:'.length);
+  if (!cookies) {
+    throw 'Unable parse cookie values from Cookie: header';
+  }
+
+  return cookies;
+}
+
+function parseTokenFromRequestHeaders(reqHeaders) {
+  var headers = reqHeaders.split('\n');
+  var idx = headers.findIndex(function(hdr) {
+    return (hdr.startsWith('token:'));
+  });
+
+  if (idx < 0) {
+    throw 'Unable to find "token:" entry in HTTP headers';
+  }
+
+  var tokenHeader = headers[idx];
+  var token = tokenHeader.substr('token:'.length).trim();
+  if (token.startsWith('"')) {
+    token = token.substr(1);
+  }
+  if (token.endsWith('"')) {
+    token = token.substr(0, token.length - 1);
+  }
+  if (!token) {
+    throw 'Unable parse token value from token: header';
+  }
+
+  return token;
+}
+
+</script>
+</body>
+</html>

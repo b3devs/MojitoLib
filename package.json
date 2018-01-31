@@ -1,0 +1,18 @@
+{
+  "author": "b3devs",
+  "description": "Mojito library used by Mojito spreadsheet to access Mint.com",
+  "devDependencies": {
+    "babel-core": "6.24.0",
+    "babel-loader": "6.4.1",
+    "babel-preset-es2015": "6.24.0",
+    "babel-register": "6.24.0",
+    "webpack": "2.3.2"
+  },
+  "license": "MIT",
+  "name": "mojito-lib",
+  "scripts": {
+    "build": "node_modules/.bin/webpack",
+    "build_prod": "node_modules/.bin/webpack -p"
+  },
+  "version": "1.1.7"
+}

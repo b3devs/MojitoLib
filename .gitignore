@@ -1,0 +1,5 @@
+node_modules/
+.idea/
+gapps.config.json
+dist/MojitoLib.js
+
