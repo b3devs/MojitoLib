@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2018 b3devs@gmail.com
+ * MIT License: https://spdx.org/licenses/MIT.html
+ */
 MojitoLib = this;
 
 // Wire up global button handlers (for gapps dialogs)
