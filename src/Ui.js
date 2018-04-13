@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2018 b3devs@gmail.com
+ * Copyright (c) 2013-2018 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -160,19 +160,25 @@ export const Ui = {
     syncWithMint: function(syncAll, saveEdits, promptSaveEdits, importTxns, importAccountBal, importCatsTags)
     {
       // If we're running int "demo mode" then don't do anything
-      if (Utils.checkDemoMode())
+      if (Utils.checkDemoMode()) {
         return;
+      }
+
+      // Before doing anything, make sure the mint session is still valid.
+      // If expired (no cookies), then show message box and abort.
+      var cookies = Mint.Session.getCookies(false);
+      if (!cookies) {
+        Browser.msgBox('Mint authentication expired', 'The Mint authentication token has not been provided or it has expired. Please re-enter the Mint authentication headers then retry the operation.', Browser.Buttons.OK);
+        Debug.log('Showing mint auth ui');
+        Mint.Session.showManualMintAuth();
+        return;
+      }
 
       var saveFailed = false;
       var mojitoVersionCheck = false;
 
       try
       {
-        // Prompt for login, if necessary
-        var cookies = Mint.Session.getCookies();
-        if (cookies == null)
-          return;
-
         var txnDateRange = null;
         var acctDateRange = null;
 

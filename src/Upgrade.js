@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2018 b3devs@gmail.com
+ * Copyright (c) 2013-2018 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -94,7 +94,7 @@ export const Upgrade = {
         //case "1.1.4.2":
           // No auto-upgrade from version 1.1.4.2. Script change and trigger added to spreadsheet.
 
-        // case "1.1.4.3":
+        //case "1.1.4.3":
           // No auto-upgrade from version 1.1.4.3. Mint login code moved from spreadsheet to MojitoLib, plus new Setting.
 
         case "1.1.5":
@@ -103,15 +103,19 @@ export const Upgrade = {
         case "1.1.6":
         case "1.1.6.1":
         case "1.1.6.2":
-        case "1.1.6.3":
           newVer = this.upgradeFrom_1_1_5(newVer);
           break;
+
+        //case "1.1.6.3":
+        // No auto-upgrade from version 1.1.6.3 to 1.2.0. Various updates to spreadsheet, bug fixes to MojitoLib, plus MojitoLib is now fully open source.
 
         default:
           throw Utilities.formatString("Auto-upgrade from version %s to %s is not supported. Please download the latest version of Mojito instead.", fromVer, toVer);
         }
 
       } // while
+
+      if (Debug.enabled) Debug.log("Upgrade to version %s complete", toVer);
     }
     catch(e)
     {
@@ -231,7 +235,7 @@ export const Upgrade = {
 
   upgradeFrom_1_1_5: function(fromVer) {
     // Just a code upgrade. Nothing to do.
-    return "1.1.6.4";
+    return "1.1.6.3";
   },
 
   //--------------------------------------------------------------------------

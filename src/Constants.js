@@ -1,12 +1,12 @@
 'use strict';
 /*
- * Copyright (c) 2018 b3devs@gmail.com
+ * Copyright (c) 2013-2018 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
 export const Const = {
 
-  CURRENT_MOJITO_VERSION: '1.1.6.4',
+  CURRENT_MOJITO_VERSION: '1.2.0',
   DELIM: ',',
   DELIM_2: ';;',
   
@@ -77,12 +77,14 @@ export const Const = {
   IDX_DATERANGE_THIS_WEEK: 'this week',
   IDX_DATERANGE_LAST_WEEK: 'last week',
   IDX_DATERANGE_CUSTOM: 'Custom', // Mixed case is on purpose
-  
-  TXN_ACTION_DEFAULT: 'Select an action',  // This one must match the exact case of validation item
-  TXN_ACTION_SORT_BY_DATE_DESC: 'sort by date (descending)', // All other actions must be lowercase
-  TXN_ACTION_SORT_BY_DATE_ASC: 'sort by date (ascending)',
-  TXN_ACTION_SORT_BY_MONTH_AMOUNT: 'sort by month / amount',
-  TXN_ACTION_CLEAR_TXN_MATCHES: 'clear txn row highlights',
+
+  TXN_ACTION_SORT_BY_DEFAULT: "Sort by ...",  // This one must match the exact case of validation item
+  TXN_ACTION_SORT_BY_DATE_DESC: "date (descending)", // All other actions must be lowercase
+  TXN_ACTION_SORT_BY_DATE_ASC: "date (ascending)",
+  TXN_ACTION_SORT_BY_MONTH_AMOUNT: "month / amount",
+
+  TXN_ACTION_OTHER_DEFAULT: "Other actions ...",  // This one must match the exact case of validation item
+  TXN_ACTION_CLEAR_TXN_MATCHES: "clear txn row highlights",
   
   TXN_MATCHES_BUDGET_HDR: 'Budget Matches',
   TXN_MATCHES_INOUT_HDR: 'In / Out Matches',

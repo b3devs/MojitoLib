@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2018 b3devs@gmail.com
+ * Copyright (c) 2013-2018 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -45,13 +45,10 @@ export const Mint = {
         // Clear all txn formatting (row colors, text colors, bold, italics, etc.)
         // We will re-apply it after the txns have been imported
         range.clear({formatOnly: true});
-        
+
         var cookies = Mint.Session.getCookies();
         if (!cookies) {
-//          const args = arguments.slice(1);
-          Debug.log('Saving importTransactions() to CommandQueue');//: %s', JSON.stringify(args));
-//          CommandQueue.pushCommand('Mint.TxnData.importTransactions', args);
-          return;
+          throw new Error('Mint session has expired');
         }
 
         if (interactive) {
@@ -982,7 +979,7 @@ export const Mint = {
       Mint.Session.clearCookies();
     },
 
-    getCookies(throwIfNone)
+    getCookies(throwIfNone = true)
     {
       var cache = Utils.getPrivateCache();
       var cookies = cache.get(Const.CACHE_LOGIN_COOKIES);
@@ -997,28 +994,10 @@ export const Mint = {
       {
         if (Debug.enabled) Debug.log("Mint.Session.getCookies: No login cookies in cache");
 
-        //// Auto-login no longer supported with Mint's new two-factor auth changes 
-//        if (mintAccount) {
-//          // If mint password was saved, try to log in
-//          var pwd = Utils.getSavedPassword();
-//          if (pwd) {
-//            if (Debug.enabled) Debug.log("Mint.Session.getCookies: Attempting to log in using saved password");
-//            cookies = this.loginMintUser(mintAccount, pwd);
-//            if (!cookies && Debug.enabled) { Debug.log("Mint.Session.getCookies: Login using saved password failed"); }
-//          }
-//        }
-
         // If cookies are not in the cache, prompt the user to provide mint auth data.
-        if (!throwIfNone) {
-          Debug.log('Showing mint auth ui');
-          toast('"Enter Mint authentication headers, then retry operation', 'Mint auth expired');
-          Mint.Session.showManualMintAuth();
-          cookies = null;
+        if (throwIfNone) {
+          throw new Error("Mint authentication has expired.");
         }
-      }
-
-      if (!cookies && throwIfNone === true) {
-        throw new Error("Unable to get Mint login cookies from cache.");
       }
 
       return cookies;
@@ -1082,18 +1061,23 @@ export const Mint = {
       try {
         var cache = Utils.getPrivateCache();
         var cookies = args.cookies;
-        Debug.log("Cookies: " + cookies);
-        cache.put(Const.CACHE_LOGIN_COOKIES, cookies, Const.CACHE_SESSION_EXPIRE_SEC);
+        Debug.log("Cookies from HTTP headers: " + cookies);
 
         var token = args.token;
-        Debug.log("Token: " + token);
-        var retrievedToken = Mint.Session.getSessionToken(cookies);
-        cache.put(Const.CACHE_SESSION_TOKEN, token, Const.CACHE_SESSION_EXPIRE_SEC);
+        Debug.log("Token from HTTP headers: " + token);
+        var result = Mint.Session.fetchTokenAndUsername(cookies);
+        let retrievedToken = result && result.token;
 
-        success = (!token || token === retrievedToken);
+        success = (retrievedToken && token === retrievedToken);
         if (success) {
-          // Save successful email to settings (hopefully the user typed it in correctly)
-          Settings.setSetting(Const.IDX_SETTING_MINT_LOGIN, args.email);
+          // Cache cookies and token
+          cache.put(Const.CACHE_LOGIN_COOKIES, cookies, Const.CACHE_SESSION_EXPIRE_SEC);
+          cache.put(Const.CACHE_SESSION_TOKEN, token, Const.CACHE_SESSION_EXPIRE_SEC);
+
+          // Save username (email)
+          if (result.username) {
+            Settings.setSetting(Const.IDX_SETTING_MINT_LOGIN, result.username);
+          }
         }
         toast('Mint authentication ' + (success ? 'succeeded': 'FAILED'));
       }
@@ -1435,7 +1419,7 @@ export const Mint = {
       Debug.log("getSessionToken: Fetching token from Mint overview page...");
       const result = Mint.Session.fetchTokenAndUsername(cookies);
 
-      return result.token;
+      return (result ? result.token : null);
     },
 
     fetchTokenAndUsername(cookies) {
@@ -1453,15 +1437,16 @@ export const Mint = {
 
       try
       {
-        var response = null;
-
-        response = UrlFetchApp.fetch(url, options);
+        let response = UrlFetchApp.fetch(url, options);
         if (response && (response.getResponseCode() === 200))
         {
           var respBody = response.getContentText();
           //Debug.log("Session token fetch response:  " + respBody);
 
           result = this.parseTokenAndUsernameFromOverviewHtml(respBody);
+          if (!result) {
+            throw new Error('Invalid headers provided.')
+          }
           if (result.token) {
             cache.put(Const.CACHE_SESSION_TOKEN, result.token, Const.CACHE_SESSION_EXPIRE_SEC);
           }
@@ -1487,7 +1472,7 @@ export const Mint = {
       catch(e)
       {
         Debug.log(Debug.getExceptionInfo(e));
-        Browser.msgBox("Error: " + e.toString());
+        Browser.msgBox(e.toString());
       }
 
       return result;

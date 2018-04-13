@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2018 b3devs@gmail.com
+ * Copyright (c) 2013-2018 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -41,10 +41,18 @@ export const Sheets = {
         Sheets.About.showAuthorizationMsg(showAuthMsg);
         
         Ui.Menu.setupMojitoMenu(true);
-        
+
         // Set default values
-        var txnActionCell = ss.getRangeByName("TxnSheetAction");
-        txnActionCell.setValue(Const.TXN_ACTION_DEFAULT);
+        const txnActionSortCell = ss.getRangeByName("TxnSheetSortAction");
+        if (txnActionSortCell) {
+          txnActionSortCell.setValue(Const.TXN_ACTION_SORT_BY_DEFAULT);
+          const txnActionOtherCell = ss.getRangeByName("TxnSheetOtherAction");
+          txnActionOtherCell.setValue(Const.TXN_ACTION_OTHER_DEFAULT);
+        }
+        else {
+          const txnActionCell = ss.getRangeByName("TxnSheetAction");
+          txnActionCell.setValue(Const.TXN_ACTION_SORT_BY_DEFAULT);
+        }
       }
       catch (e) {
         Debug.log(Debug.getExceptionInfo(e));
@@ -125,7 +133,7 @@ export const Sheets = {
         }
         else if (sheetType === Const.SHEET_TYPE_INOUT)
         {
-          if (numRows == 1 && numColumns == 1)
+          if (numRows === 1 && numColumns === 1)
           {
             // Was a new date range selected from the drop-down?
             var dateRangeCell = sheet.getRange(3, 1);
@@ -139,13 +147,13 @@ export const Sheets = {
               var endDateCell = Sheets.InOut.getRangeByName(sheet, "InOutEndDate");
               
               // Was start date edited directly?
-              if (editRowFirst == startDateCell.getRow() && editColFirst == startDateCell.getColumn())
+              if (editRowFirst === startDateCell.getRow() && editColFirst === startDateCell.getColumn())
               {
                 dateRangeCell.setValue(Const.IDX_DATERANGE_CUSTOM);
                 Sheets.InOut.updateCalculations(sheet);
               }
               // Was end date edited directly?
-              else if (editRowFirst == endDateCell.getRow() && editColFirst == endDateCell.getColumn())
+              else if (editRowFirst === endDateCell.getRow() && editColFirst === endDateCell.getColumn())
               {
                 dateRangeCell.setValue(Const.IDX_DATERANGE_CUSTOM);
                 Sheets.InOut.updateCalculations(sheet);
@@ -162,13 +170,18 @@ export const Sheets = {
             {
               this.onTxnUpdate(e);
             }
-          else if (numRows == 1 && numColumns == 1)
+          else if (numRows === 1 && numColumns === 1)
           {
-            var txnActionCell = ss.getRangeByName("TxnSheetAction");
-            
-            if (editRowFirst == txnActionCell.getRow() && editColFirst == txnActionCell.getColumn())
+            var txnSortActionCell = ss.getRangeByName("TxnSheetSortAction");
+            var txnOtherActionCell = ss.getRangeByName("TxnSheetOtherAction");
+
+            if (editRowFirst === txnSortActionCell.getRow() && editColFirst === txnSortActionCell.getColumn())
             {
-              this.onTxnAction(e);
+              this.onTxnSortAction(e);
+            }
+            else if (editRowFirst === txnOtherActionCell.getRow() && editColFirst === txnOtherActionCell.getColumn())
+            {
+              this.onTxnOtherAction(e);
             }
           }
         }
@@ -178,7 +191,7 @@ export const Sheets = {
         }
         else if (sheetName === Const.SHEET_NAME_SETTINGS)
         {
-          if (numRows == 1 && numColumns == 1 && editColFirst == 2)
+          if (numRows === 1 && numColumns === 1 && editColFirst === 2)
           {
             var settingsRange = ss.getRangeByName("SettingsRange");
 
@@ -253,40 +266,46 @@ export const Sheets = {
     },
     
     //-----------------------------------------------------------------------------
-    onTxnAction: function(e) {
+    onTxnSortAction: function(e) {
 
       try
       {
-
         switch(e.value.toLowerCase())
         {
           case Const.TXN_ACTION_SORT_BY_DATE_DESC:
+          {
             toast("Sorting transactions by date (descending)", "Action", 10);
-            var txnDataRange = Utils.getTxnDataRange();
-            txnDataRange.sort([{column: Const.IDX_TXN_DATE + 1, ascending: false}, {column: Const.IDX_TXN_PARENT_ID + 1, ascending: true}, Const.IDX_TXN_ACCOUNT + 1]);
+            const txnDataRange = Utils.getTxnDataRange();
+            txnDataRange.sort([
+              {column: Const.IDX_TXN_DATE + 1, ascending: false},
+              {column: Const.IDX_TXN_PARENT_ID + 1, ascending: true},
+              Const.IDX_TXN_ACCOUNT + 1
+            ]);
             break;
-            
+          }
           case Const.TXN_ACTION_SORT_BY_DATE_ASC:
+          {
             toast("Sorting transactions by date (ascending)", "Action", 10);
-            var txnDataRange = Utils.getTxnDataRange();
-            txnDataRange.sort([{column: Const.IDX_TXN_DATE + 1, ascending: true}, {column: Const.IDX_TXN_PARENT_ID + 1, ascending: true}, Const.IDX_TXN_ACCOUNT + 1]);
+            const txnDataRange = Utils.getTxnDataRange();
+            txnDataRange.sort([
+              {column: Const.IDX_TXN_DATE + 1, ascending: true},
+              {column: Const.IDX_TXN_PARENT_ID + 1, ascending: true},
+              Const.IDX_TXN_ACCOUNT + 1
+            ]);
             break;
-            
+          }
           case Const.TXN_ACTION_SORT_BY_MONTH_AMOUNT:
-            var txnAmountCol = Utils.getTxnAmountColumn();
-            var toastMsg = "Sorting txns by month / amount";
+          {
+            const txnAmountCol = Utils.getTxnAmountColumn();
+            let toastMsg = "Sorting txns by month / amount";
             if (txnAmountCol !== Const.IDX_TXN_AMOUNT + 1) {
               toastMsg += "  (Using Amount column " + String(txnAmountCol) + ")";
             }
             toast(toastMsg, "Action", 10);
-            var txnDataRange = Utils.getTxnDataRange();
+            const txnDataRange = Utils.getTxnDataRange();
             txnDataRange.sort([{column: Const.IDX_TXN_YEAR_MONTH + 1, ascending: false}, txnAmountCol]);
             break;
-
-          case Const.TXN_ACTION_CLEAR_TXN_MATCHES:
-            toast("Clearing transaction highlights", "Action", 20);
-            Sheets.TxnData.clearRowHighlights();
-            break;
+          }
         }
         toast("Complete", "Action");
         
@@ -297,9 +316,35 @@ export const Sheets = {
         Browser.msgBox("Error: " + e.toString());
       }
       
-      e.range.setValue(Const.TXN_ACTION_DEFAULT);
+      e.range.setValue(Const.TXN_ACTION_SORT_BY_DEFAULT);
     },
-    
+
+    //-----------------------------------------------------------------------------
+    onTxnOtherAction: function(e) {
+
+      try
+      {
+        switch(e.value.toLowerCase())
+        {
+          case Const.TXN_ACTION_CLEAR_TXN_MATCHES:
+          {
+            toast("Clearing transaction highlights", "Action", 20);
+            Sheets.TxnData.clearRowHighlights();
+            break;
+          }
+        }
+        toast("Complete", "Action");
+
+      }
+      catch (e)
+      {
+        Debug.log(Debug.getExceptionInfo(e));
+        Browser.msgBox("Error: " + e.toString());
+      }
+
+      e.range.setValue(Const.TXN_ACTION_OTHER_DEFAULT);
+    },
+
     //-----------------------------------------------------------------------------
     onTxnUpdate: function(e) {
       
@@ -366,14 +411,14 @@ export const Sheets = {
   About: {
 
     getSheet: function() {
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = ss.getSheetByName(Const.SHEET_NAME_ABOUT);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(Const.SHEET_NAME_ABOUT);
       return sheet;
     },
 
     showAuthorizationMsg: function(show) {
-      var sheet = this.getSheet();
-      if (show == true) {
+      const sheet = this.getSheet();
+      if (show) {
         sheet.showRows(6, 3);
       } else {
         sheet.hideRows(6, 3);
@@ -381,7 +426,7 @@ export const Sheets = {
     },
     
     turnOffAuthMsg: function() {
-      var showAuthMsg = Settings.getInternalSetting(Const.IDX_INT_SETTING_SHOW_AUTH_MSG);
+      const showAuthMsg = Settings.getInternalSetting(Const.IDX_INT_SETTING_SHOW_AUTH_MSG);
       if (showAuthMsg != false) {
         Settings.setInternalSetting(Const.IDX_INT_SETTING_SHOW_AUTH_MSG, false);
         this.showAuthorizationMsg(false);
@@ -394,8 +439,8 @@ export const Sheets = {
   TxnData: {
 
     getSheet: function() {
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = ss.getSheetByName(Const.SHEET_NAME_TXNDATA);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(Const.SHEET_NAME_TXNDATA);
       return sheet;
     },
 
@@ -409,7 +454,7 @@ export const Sheets = {
     {
       if (this._txnRangeAndValues == null) {
         if (Debug.enabled) Debug.log("** Fetching all txn values **");
-        var txnRange = Utils.getTxnDataRange();
+        const txnRange = Utils.getTxnDataRange();
         this._txnRangeAndValues = {
           txnRange : txnRange,
           txnValues : txnRange.getValues(),
@@ -423,18 +468,18 @@ export const Sheets = {
     // Sheets.TxnData
     determineImportDateRange: function(mintAccount)
     {
-      var today = new Date();
-      var startDate = null;
+      const today = new Date();
+      let startDate = null;
       // We'll use the last day of the month as the end date
-      var endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
       // For calculating the start date, we'll use the date of the first pending txn minus
       // a "fudge factor". There's no harm in importing more txns than we actually need to.
-      var FUDGE_FACTOR = 14;  // We'll use a fudge factor of 14 days
+      const FUDGE_FACTOR = 14;  // We'll use a fudge factor of 14 days
 
-      var trv = this.getTxnRangeAndValues();
-      var existingValues = trv.txnValues;
-      var existingLen = existingValues.length;
+      const trv = this.getTxnRangeAndValues();
+      const existingValues = trv.txnValues;
+      let existingLen = existingValues.length;
 
       if (existingLen === 0) {
         // If no transactions have been imported yet, then just use January 1st
@@ -450,16 +495,16 @@ export const Sheets = {
         // days old, not several months old.
         // Our work-around is to ignore any pending txn whose date is 30 days before the
         // most recent txn.
-        var lastTxnDate = Utils.find2dArrayMaxValue(existingValues, Const.IDX_TXN_DATE, function(row) { return (row[Const.IDX_TXN_MINT_ACCOUNT] === mintAccount); } );
+        let lastTxnDate = Utils.find2dArrayMaxValue(existingValues, Const.IDX_TXN_DATE, function(row) { return (row[Const.IDX_TXN_MINT_ACCOUNT] === mintAccount); } );
         if (lastTxnDate == null) {
           lastTxnDate = new Date();
         }
-        var invalidPendingTxnDate = new Date(lastTxnDate.getFullYear(), lastTxnDate.getMonth(), lastTxnDate.getDate() - 30);
-        var firstPendingTxnDate = null;
+        const invalidPendingTxnDate = new Date(lastTxnDate.getFullYear(), lastTxnDate.getMonth(), lastTxnDate.getDate() - 30);
+        let firstPendingTxnDate = null;
 
-        var existingLen = existingValues.length;
-        for (var i = 0; i < existingLen; ++i) {
-          var txnDate = existingValues[i][Const.IDX_TXN_DATE];
+        existingLen = existingValues.length;
+        for (let i = 0; i < existingLen; ++i) {
+          const txnDate = existingValues[i][Const.IDX_TXN_DATE];
 
           if (existingValues[i][Const.IDX_TXN_MINT_ACCOUNT] === mintAccount &&
                 (firstPendingTxnDate == null ||
@@ -487,26 +532,26 @@ export const Sheets = {
       if (txnValues == null || txnValues.length === 0)
         return;
 
-      var numCols = Const.IDX_TXN_LAST_COL + 1;
+      const numCols = Const.IDX_TXN_LAST_COL + 1;
       Debug.log("inserting " + txnValues.length + " txns");
 
-      var txnRange = Utils.getTxnDataRange();
+      const txnRange = Utils.getTxnDataRange();
 
       // Merge new txns with existing txns
-      var rowCountBefore = txnRange.getNumRows();
-      var existingValues = (replaceExistingData ? [] : txnRange.getValues());
+      const rowCountBefore = txnRange.getNumRows();
+      const existingValues = (replaceExistingData ? [] : txnRange.getValues());
 
       Sheets.TxnData.mergeTxnValues(txnValues, existingValues);
       
-      var range = txnRange.offset(0, 0, existingValues.length, numCols);
+      const range = txnRange.offset(0, 0, existingValues.length, numCols);
       range.setValues(existingValues);
       
       // If there are fewer txns after the merge, then delete the extras from the spreadsheet
-      var rowCountAfter = existingValues.length;
-      var rowDiff = rowCountBefore - rowCountAfter;
+      const rowCountAfter = existingValues.length;
+      const rowDiff = rowCountBefore - rowCountAfter;
       if (rowDiff > 0) {
         Debug.log("Deleting " + rowDiff + " extra txn rows from TxnData sheet.");
-        var delRange = txnRange.offset(rowCountAfter, 0, rowDiff, numCols);
+        const delRange = txnRange.offset(rowCountAfter, 0, rowDiff, numCols);
         delRange.clear();
       }
 
