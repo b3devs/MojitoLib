@@ -10,5 +10,5 @@ To modify this library to your liking, you must do the following:
 1. Edit one or more files using you favorite Javascript editor.
 1. Build the changes:  npm run build
 1. Upload the changes to your Google Drive project: gapps push
-1. Open your copy of Mojito, go to the Script Editor, and [change the MojitoLib library](https://developers.google.com/apps-script/guides/libraries) to the one in your Google Drive.
-1. When you are happing with your changes, commit the files to your local git repo (git add -u, git commit)
+1. Open your copy of Mojito, go to the Script Editor, and [change the MojitoLib library](https://developers.google.com/apps-script/guides/libraries) to the one in *your* Google Drive.
+1. When you are happy with your changes, commit the files to your local git repo (git add -u, git commit)
