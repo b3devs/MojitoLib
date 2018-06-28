@@ -28,7 +28,7 @@ export const Upgrade = {
   upgradeMojito : function(fromVer, toVer) {
 
     if (Debug.enabled) Debug.log("Attempting to upgrade Mojito from version %s to %s", fromVer, toVer);
-    toast(Utilities.formatString("Upgrading Mojito from version %s to version %s", fromVer, toVer), "Mojito upgrade");
+    toast(`Upgrading Mojito from version ${fromVer} to version ${toVer}`, 'Mojito upgrade');
 
     if (this.compareVersions(fromVer, toVer) > 0) {
       // Spreadsheet version is greater than MojitoLib ver. We don't support downgrading.
@@ -110,7 +110,7 @@ export const Upgrade = {
         // No auto-upgrade from version 1.1.6.3 to 1.2.0. Various updates to spreadsheet, bug fixes to MojitoLib, plus MojitoLib is now fully open source.
 
         default:
-          throw Utilities.formatString("Auto-upgrade from version %s to %s is not supported. Please download the latest version of Mojito instead.", fromVer, toVer);
+          throw new Error(`Auto-upgrade from version ${fromVer} to ${toVer} is not supported. Please download the latest version of Mojito instead.`);
         }
 
       } // while
@@ -122,7 +122,7 @@ export const Upgrade = {
       upgradeFailed = true;
       Debug.log(Debug.getExceptionInfo(e));
       //TODO: Need better message to user
-      Browser.msgBox("Mojito upgrade failed", Utilities.formatString("Mojito upgrade from version %s to %s failed. Error: %s", fromVer, toVer, e.toString()), Browser.Buttons.OK);
+      Browser.msgBox("Mojito upgrade failed", `Mojito upgrade from version ${fromVer} to ${toVer} failed. Error: ${e.toString()}`, Browser.Buttons.OK);
     }
 
     if (newVer !== fromVer) {

@@ -138,7 +138,7 @@ export const Reconcile = {
       let rColRange = reconRange.offset(0, Const.IDX_RECON_RECONCILE, rowCount, 1);
 
       const reconTotalCell = sheet.getRange(Const.RECON_ROW_SUM, Const.IDX_RECON_AMOUNT + 1, 1, 1);
-      reconTotalCell.setFormula(Utilities.formatString('=SUMIF(%s, "R", %s)', rColRange.getA1Notation(), amountColRange.getA1Notation()));
+      reconTotalCell.setFormula(`=SUMIF(${rColRange.getA1Notation()}, "R", ${amountColRange.getA1Notation()})`);
       reconTotalCell.setFontWeight('bold');
       reconTotalCell.setBackground(this.RECON_ROW_COLOR);
 //      reconTotalCell.setBorder(true, true, true, true, false, false);
@@ -256,8 +256,9 @@ export const Reconcile = {
         if (Debug.traceEnabled) Debug.trace('Reconciling txn: ' + reconValues[i][Const.IDX_RECON_TXN_ID]);
 
         // Highlight the row
-//        const txnReconRowRange = txnRange.offset(txnRow, highlightStartCol, 1, Const.IDX_TXN_MATCHES - highlightStartCol);
-//        SpreadsheetUtils.setRowColors(txnReconRowRange, null, false, this.RECON_ROW_COLOR, false);
+        // (disabled to speed up performance)
+        //const txnReconRowRange = txnRange.offset(txnRow, highlightStartCol, 1, Const.IDX_TXN_MATCHES - highlightStartCol);
+        //SpreadsheetUtils.setRowColors(txnReconRowRange, null, false, this.RECON_ROW_COLOR, false);
       }
 
       // Mark split transactions as reconciled, 'R'
@@ -270,15 +271,16 @@ export const Reconcile = {
           throw new Error(Utilities.formatString('Child transactions of parent %d cannot be found: %s, %s, $%f', splitValues[i][Const.IDX_RECON_TXN_ID], splitValues[i][Const.IDX_RECON_DATE], splitValues[i][Const.IDX_RECON_MERCHANT], splitValues[i][Const.IDX_RECON_AMOUNT]));
         }
 
-        if (Debug.enabled) Debug.log(Utilities.formatString('Child split txn rows (parent id: %d): %s', splitValues[i][Const.IDX_RECON_TXN_ID], txnRows.toSource()));
+        if (Debug.enabled) Debug.log('Child split txn rows (parent id: %d): %s', splitValues[i][Const.IDX_RECON_TXN_ID], txnRows.toSource());
         for (let j = 0; j < txnRows.length; ++j) {
           const txnReconCell = txnRange.offset(txnRows[j], Const.IDX_TXN_CLEAR_RECON, 1, 1);
           txnReconCell.setValue('R');
           Sheets.TxnData.validateTransactionEdit(txnRange.getSheet(), txnRange.getRow() + txnRows[j], Const.IDX_TXN_CLEAR_RECON + 1, Const.IDX_TXN_CLEAR_RECON + 1, Const.EDITTYPE_EDIT);
 
           // Highlight the row
-//          const txnReconRowRange = txnRange.offset(txnRows[j], highlightStartCol, 1, Const.IDX_TXN_MATCHES - highlightStartCol);
-//          SpreadsheetUtils.setRowColors(txnReconRowRange, null, false, this.RECON_ROW_COLOR, false);
+          // (disabled to speed up performance)
+          //const txnReconRowRange = txnRange.offset(txnRows[j], highlightStartCol, 1, Const.IDX_TXN_MATCHES - highlightStartCol);
+          //SpreadsheetUtils.setRowColors(txnReconRowRange, null, false, this.RECON_ROW_COLOR, false);
         }
       }
 

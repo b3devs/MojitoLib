@@ -4,7 +4,7 @@
  */
 import {Const} from './Constants.js'
 import {Debug} from './Debug.js';
-import {Utils} from './Utils.js';
+import {Utils, Settings} from './Utils.js';
 import {Db} from './Db.js';
 import {Mint} from './MintApi.js';
 
@@ -27,7 +27,7 @@ export const Tests = {
         // Run setup() before and teardown() after every test()
         Tests.setup();
 
-        var testFunc = Utilities.formatString("Tests.%s()", test);
+        var testFunc = `Tests.${test}()`;
         eval(testFunc);
         Logger.log("PASS : %s", test);
 
@@ -96,15 +96,15 @@ function assert(expr) {
 }
 function assertEqual(expected, actual) {
   if (expected !== actual)
-    throw Utilities.formatString("assertEqual failed: %s !== %s", String(expected), String(actual));
+    throw new Error(`assertEqual failed: ${String(expected)} !== ${String(actual)}`);
 }
 function assertNull(obj) {
   if (obj !== null)
-    throw "assertNull failed: obj !== null";
+    throw new Error('assertNull failed: obj !== null');
 }
 function assertNotNull(obj) {
   if (obj === null)
-    throw "assertNotNull failed: obj === null";
+    throw new Error('assertNotNull failed: obj === null');
 }
 
 const Mock = {
@@ -131,4 +131,4 @@ const Mock = {
 
 };
 
-Settings = Mock.Settings;
+//Settings = Mock.Settings;

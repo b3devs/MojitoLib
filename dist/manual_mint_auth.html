@@ -42,9 +42,6 @@ if (Debug.enabled) Debug.log("Showing manual_mint_auth.html");
 
 <table style='width: 100%'>
 <tr>
-<td>Mint account (email):</td><td><input id="email" type="text" value="<?!= mintAccount ?>" style="width: 250px;" /></td>
-</tr>
-<tr>
 <td style='margin-top: 10px' colspan=2>HTTP headers from mint.intuit.com (see <a target="_blank" href='http://b3devs.blogspot.com/p/mint-auth-steps.html'>these steps</a> for getting the headers):</td>
 </tr>
 <tr>
@@ -69,11 +66,6 @@ if (Debug.enabled) Debug.log("Showing manual_mint_auth.html");
 function onOK() {
   try
   {
-    var mintUserAcct = document.getElementById("email").value;
-    if (!mintUserAcct) {
-      throw 'Enter your Mint login email address';
-    }
-    
     var reqHeaders = document.getElementById("request_headers").value;
     if (!reqHeaders) {
       throw 'HTTP headers from an active Mint session must be provided';
@@ -83,7 +75,6 @@ function onOK() {
     var token = parseTokenFromRequestHeaders(reqHeaders);
 
     var args = {
-      email: document.getElementById("email").value,
       cookies: cookies,
       token: token
     };

@@ -695,14 +695,13 @@ export const Mint = {
                 var startTime = startDate.getTime();
                 var endTime = endDate.getTime();
 
-                if (importTodaysBalance == undefined) {
+                if (importTodaysBalance === undefined) {
                   var includeToday = (startTime <= todayTime && todayTime <= endTime);
                   if (includeToday) {
-                    var msg = Utilities.formatString("Account balance history does not exist for account '%s'. Only today's balance will be imported.", account.name);
-                    Browser.msgBox("Account without history detected", msg, Browser.Buttons.OK);
+                    account.balanceHistoryNotAvailable = true;
                     importTodaysBalance = true;
                   } else {
-                    var msg = Utilities.formatString("Account balance history does not exist for account '%s'. Would you like import today's balance event though it falls outside your specified date range?", account.name);
+                    var msg = `Account balance history does not exist for account '${account.name}'. Would you like import today's balance even though it falls outside your specified date range?`;
                     var choice = Browser.msgBox("Account without history detected", msg, Browser.Buttons.YES_NO);
                     importTodaysBalance = (choice === "yes");
                   }
@@ -1041,7 +1040,7 @@ export const Mint = {
     showManualMintAuth() {
       try {
         var htmlOutput = HtmlService.createTemplateFromFile('manual_mint_auth.html').evaluate();
-        htmlOutput.setHeight(400).setWidth(600).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+        htmlOutput.setHeight(350).setWidth(600).setSandboxMode(HtmlService.SandboxMode.IFRAME);
         SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Mint Authentication - HTTP headers');
       }
       catch (e) {

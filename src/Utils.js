@@ -367,7 +367,7 @@ export const Utils = {
     }
 
     var range = sheet.getRange(firstRow, 1, numRows, lastCol);
-    if (Debug.enabled) Debug.log(Utilities.formatString('getDataRange(%s), (%d,%d) - (%d, %d)', sheetName, firstRow, 1, numRows, lastCol));
+    if (Debug.enabled) Debug.log('getDataRange(%s), (%d,%d) - (%d, %d)', sheetName, firstRow, 1, numRows, lastCol);
 
     return range;
   },

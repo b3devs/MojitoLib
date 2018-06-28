@@ -695,7 +695,7 @@ export const Sheets = {
           }
           
           if (!isValid) {
-            if (Debug.enabled) Debug.log(Utilities.formatString("Txn row %d, column %d is not valid", editRowNum, colIndex + 1));
+            if (Debug.enabled) Debug.log(`Txn row ${editRowNum}, column ${colIndex + 1} is not valid`);
             break;  // if a column value is invalid, there's no point in validating other columns
           }
 
@@ -808,7 +808,7 @@ export const Sheets = {
       try
       {
         mintAccount = mintAccount.toLowerCase();
-        if (Debug.enabled) Debug.log(Utilities.formatString("Saving modified txns for mint account '%s'", mintAccount));
+        if (Debug.enabled) Debug.log(`Saving modified txns for mint account '${mintAccount}'`);
 
         if (interactive === undefined) {
           interactive = false;
@@ -831,7 +831,7 @@ export const Sheets = {
         var updateCount = pendingUpdates.length;
         if (updateCount === 0)
         {
-          if (interactive) toast("There are no transaction changes to save.", "Transaction update");
+          if (interactive) toast('There are no transaction changes to save.', 'Transaction update');
           return true; // nothing to do
         }
 
@@ -840,7 +840,7 @@ export const Sheets = {
 
         var cookies = Mint.Session.getCookies();
 
-        if (interactive) toast(Utilities.formatString("Uploading %d transaction(s) to Mint", updateCount), "Transaction update", 60);
+        if (interactive) toast(`Uploading ${updateCount} transaction(s) to Mint`, 'Transaction update', 60);
 
         for (var i = 0; i < updateCount; ++i) {
           var rowIndex = pendingUpdates[i];
@@ -878,7 +878,7 @@ export const Sheets = {
 
           if (updateFormData == null) {
             failedUpdates.push(i);
-            if (Debug.enabled) Debug.log(Utilities.formatString("Unable to get form data for row %d. Skipping.", startRow + rowIndex));
+            if (Debug.enabled) Debug.log(`Unable to get form data for row ${startRow + rowIndex}. Skipping.`);
             continue;
           }
 
@@ -977,7 +977,7 @@ export const Sheets = {
               // For a all non-split changes (edit, new, delete), just clear the edit status column
               var editStatusRow = editValues[rowIndex];
               // The txn should have only one edit status: E, N, or D
-              Debug.assert(editStatusRow[0].length === 1, Utilities.formatString("Unexpected: Txn at index %s has multiple edit statuses: %s", rowIndex, editStatusRow[0]));
+              Debug.assert(editStatusRow[0].length === 1, `Unexpected: Txn at index ${rowIndex} has multiple edit statuses: ${editStatusRow[0]}`);
               editStatusRow[0] = "";
               editBgColors[rowIndex][0] = Const.NO_COLOR;
               if (Debug.enabled) Debug.log("Clearing edit status of txn row index %s", rowIndex);
@@ -993,16 +993,16 @@ export const Sheets = {
           }
         } // for i
 
-        var failMsg = "";
+        var failMsg = '';
         var failCount = failedUpdates.length;
         if (failCount > 0) {
           allSucceeded = false;
-          failMsg = Utilities.formatString(", but %d failed. If the problem persists, try re-importing the failing transaction(s) and updating them again.", failCount);
+          failMsg = `, but ${failCount} failed. If the problem persists, try re-importing the failing transaction(s) and updating them again.`;
         }
 
         editRange.setValues(editValues);
         editRange.setBackgrounds(editBgColors);
-        if (interactive) toast(Utilities.formatString("%d transaction(s) successfully uploaded%s", successCount, failMsg), "Transaction update", (failCount > 0 ? 15 : 5));
+        if (interactive) toast(`${successCount} transaction(s) successfully uploaded${failMsg}`, 'Transaction update', (failCount > 0 ? 15 : 5));
       }
       catch (e)
       {
@@ -1053,7 +1053,7 @@ export const Sheets = {
         var deleteRow = false;
         var revertChange = false;
 
-        if (Debug.enabled) Debug.log(Utilities.formatString("Processing split. newAmount: %f, origAmount: %f", newAmount, origAmount));
+        if (Debug.enabled) Debug.log(`Processing split. newAmount: ${newAmount}, origAmount: ${origAmount}`);
 
         if (newAmount == null || Math.round(newAmount * 100) === 0) {
           // Amount was set to null or 0
@@ -1279,31 +1279,37 @@ export const Sheets = {
     // Sheets.TxnData
     showTxnMatches: function(matchName, updateObj, sortCriteria) {
 
-      var currDisplayedMatches = this.getTxnMatchesHeader();
-      if (currDisplayedMatches !== matchName) {
-        updateObj.updateCalculations();
+      try {
+        var currDisplayedMatches = this.getTxnMatchesHeader();
+        if (currDisplayedMatches !== matchName) {
+          updateObj.updateCalculations();
+        }
+
+        toast(`Sorting transactions by '${matchName}' and highlighting rows.`, 'Action', 30);
+        var txnDataRange = Utils.getTxnDataRange();
+
+        var txnDataLen = txnDataRange.getNumRows();
+        var txnMatchesRange = txnDataRange.offset(0, Const.IDX_TXN_MATCHES, txnDataLen, 1);
+        var highlightColors = txnMatchesRange.getBackgrounds();
+        var highlightStartCol = txnDataRange.getSheet().getFrozenColumns();
+
+        var txnHighlightRange = txnDataRange.offset(0, highlightStartCol, txnDataLen, Const.IDX_TXN_MATCHES - highlightStartCol);
+        SpreadsheetUtils.setRowColors(txnHighlightRange, highlightColors, true, Const.NO_COLOR, false);
+
+        if (!sortCriteria) {
+          sortCriteria = updateObj.getTxnSortCriteria();
+        }
+        txnDataRange.sort(sortCriteria);
+
+        var firstCell = txnDataRange.offset(0, Const.IDX_TXN_ACCOUNT, 1, 1);
+        firstCell.activate();
+
+        toast("Done");
       }
-
-      toast(Utilities.formatString("Sorting transactions by '%s' and highlighting rows.", matchName), "Action", 30);
-      var txnDataRange = Utils.getTxnDataRange();
-      
-      var txnDataLen = txnDataRange.getNumRows();
-      var txnMatchesRange = txnDataRange.offset(0, Const.IDX_TXN_MATCHES, txnDataLen, 1);
-      var highlightColors = txnMatchesRange.getBackgrounds();
-      var highlightStartCol = txnDataRange.getSheet().getFrozenColumns();
-      
-      var txnHighlightRange = txnDataRange.offset(0, highlightStartCol, txnDataLen, Const.IDX_TXN_MATCHES - highlightStartCol);
-      SpreadsheetUtils.setRowColors(txnHighlightRange, highlightColors, true, Const.NO_COLOR, false);
-
-      if (sortCriteria === undefined) {
-        sortCriteria = updateObj.getTxnSortCriteria();
+      catch (e) {
+        Debug.log(Debug.getExceptionInfo(e));
+        throw e;
       }
-      txnDataRange.sort(sortCriteria);
-
-      var firstCell = txnDataRange.offset(0, Const.IDX_TXN_ACCOUNT, 1, 1);
-      firstCell.activate();
-
-      toast("Done");
     },
 
     //-----------------------------------------------------------------------------
@@ -1463,7 +1469,7 @@ export const Sheets = {
       while(end - start < 1)
       {
         idx = parseInt(start + (((end - start) / 2)));// | 0); // bit-OR with zero to remove decimal, if any
-//        Debug.log(Utilities.formatString("start: %d, end: %d, idx: %d", start, end, idx));
+//        Debug.log('start: %d, end: %d, idx: %d', start, end, idx);
         var thisTxnId = sortedTxnValues[idx][Const.IDX_TXN_ID];
         if (thisTxnId === txnId) {
           found = true;
@@ -1878,7 +1884,7 @@ export const Sheets = {
 //      }
 //
 //      // Get column count and refresh ranges in case new accounts were added.
-//      Debug.log(Utilities.formatString("Inserting account balances:  hdrValues.columns: %d, accountCount: %d, numCols: %d", hdrValues[0].length, acctCount, numCols));
+//      Debug.log('Inserting account balances:  hdrValues.columns: %d, accountCount: %d, numCols: %d', hdrValues[0].length, acctCount, numCols);
 //      hdrRange = hdrRange.offset(0, 0, hdrRange.getNumRows(), numCols);
 //      existingRange = existingRange.offset(0, 0, existingValues.length, numCols + 1);
 //
@@ -3037,7 +3043,7 @@ export const Sheets = {
             
             // Calculate the time remaining for this goal (in human readable units)
             var dateDiff = Utils.getHumanFriendlyDateDiff(now, endDate, "*");
-            goalTimeLeftArray[i][0] = Utilities.formatString("%s %s", String(dateDiff.diff), dateDiff.unit);
+            goalTimeLeftArray[i][0] = `${String(dateDiff.diff)} ${dateDiff.unit}`;
             
           } else {
             goalTimeLeftArray[i][0] = null;
