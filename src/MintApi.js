@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -273,8 +273,8 @@ export const Mint = {
       var numCols = Const.IDX_TXN_LAST_COL + 1;
       var txnValues = [];
 
-      var tagCleared = Settings.getSetting(Const.IDX_SETTING_CLEARED_TAG);
-      var tagReconciled = Settings.getSetting(Const.IDX_SETTING_RECONCILED_TAG);
+      var tagCleared = Mint.getClearedTag();
+      var tagReconciled = Mint.getReconciledTag();
       
       for (var i = 0; i < numRows; ++i)
       {
@@ -1920,34 +1920,64 @@ export const Mint = {
     
     return this._tagMap;
   },
-    
+
+  composeTxnTagArray(tagsVal, clearReconVal) {
+    let tagArray = [];
+
+    const tagCleared = Mint.getClearedTag();
+    const tagReconciled = Mint.getReconciledTag();
+
+    const reconciled = (clearReconVal.toUpperCase() === "R");
+    const cleared = (clearReconVal !== null && clearReconVal !== ""); // "Cleared" is anything other than "R" or empty
+    if (reconciled) {
+      // Reconciled transactions are also 'cleared', so we'll include both tags
+      tagArray.push(tagReconciled);
+      tagArray.push(tagCleared);
+    }
+    else if (cleared) {
+      tagArray.push(tagCleared);
+    }
+
+    if (tagsVal) {
+      tagArray.push.apply(tagArray, tagsVal.split(Const.DELIM));
+    }
+
+    return tagArray;
+  },
+
   // Mint
-  validateTags(tags, interactive)
+  /**
+   * Validate the tags of a transaction row, separating out 'cleared' and 'reconcied' status.
+   * @param tags {string[]}
+   * @param [interactive] {boolean}
+   * @returns {{isValid: boolean, tagNames: string, tagIds: string, cleared: boolean, reconciled: boolean}}
+   */
+  validateTxnTags(tagArray, interactive)
   {
-    var validationInfo = {
+    let validationInfo = {
       isValid: true,
-      tagNames: "",
-      tagIds: "",
+      tagNames: '',
+      tagIds: '',
       cleared: false,
-      reconciled: false,
+      reconciled: false
     };
 
-    if (!tags)
+    if (!tagArray) {
       return validationInfo;
+    }
 
     if (interactive == undefined)
       interactive = false;
 
-    var tagNames = "";
-    var tagIds = "";
+    var tagNames = '';
+    var tagIds = '';
     var tagCleared = Mint.getClearedTag();
     var tagReconciled = Mint.getReconciledTag();
 
     var tagMap = this.getTagMap();
-    var tagArray = tags.split(Const.DELIM);
     for (var i = 0; i < tagArray.length; ++i) {
       var tag = tagArray[i].trim();
-      if (tag === "")
+      if (tag === '')
         continue;
 
       var lookupVal = tagMap[tag.toLowerCase()];
@@ -1992,17 +2022,15 @@ export const Mint = {
   getClearedTag() {
     if (this._clearedTag === undefined) {
       var tag = Utils.getPrivateCache().get(Const.CACHE_SETTING_CLEARED_TAG);
-      if (!tag) {
+      if (tag === null) {
         tag = Settings.getSetting(Const.IDX_SETTING_CLEARED_TAG);
-        Utils.getPrivateCache().put(Const.CACHE_SETTING_CLEARED_TAG, tag, 300); // Save the tag in the cache for 5 minutes
+        // If setting is empty, store empty string in cache
+        Utils.getPrivateCache().put(Const.CACHE_SETTING_CLEARED_TAG, tag || '', 300); // Save the tag in the cache for 5 minutes
   
         if (Debug.enabled) Debug.log("getClearedTag: %s", tag);
       }
-      if (tag === "") {
-        tag = null;
-      }
-      
-      this._clearedTag = tag;
+
+      this._clearedTag = tag || null;
     }
 
     return this._clearedTag;
@@ -2014,17 +2042,15 @@ export const Mint = {
   getReconciledTag() {
     if (this._reconciledTag === undefined) {
       var tag = Utils.getPrivateCache().get(Const.CACHE_SETTING_RECONCILED_TAG);
-      if (!tag) {
+      if (tag === null) {
         tag = Settings.getSetting(Const.IDX_SETTING_RECONCILED_TAG);
-        Utils.getPrivateCache().put(Const.CACHE_SETTING_RECONCILED_TAG, tag, 300); // Save the tag in the cache for 5 minutes
+        // If setting is empty, store empty string in cache
+        Utils.getPrivateCache().put(Const.CACHE_SETTING_RECONCILED_TAG, tag || '', 300); // Save the tag in the cache for 5 minutes
   
         if (Debug.enabled) Debug.log("getReconciledTag: %s", tag);
       }
-      if (tag === "") {
-        tag = null;
-      }
-      
-      this._reconciledTag = tag;
+
+      this._reconciledTag = tag || null;
     }
     
     return this._reconciledTag;

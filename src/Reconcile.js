@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -44,16 +44,19 @@ export const Reconcile = {
   },
 
   startReconcile() {
-
     try
     {
+      if (!Mint.getClearedTag() || !Mint.getReconciledTag()) {
+        Browser.msgBox('Clear / Reconcile not enabled', 'You cannot reconcile an account until you enable this feature by specifying the corresponding tags on the Settings sheet. Refer to the Help sheet for instructions on how to do this.', Browser.Buttons.OK);
+        return;
+      }
+
       if (this.isReconcileAlreadyInProgress()) {
         // The account name cell is already filled in. Is another account already 
         const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(Const.SHEET_NAME_RECONCILE);
         sheet.activate();
         
-        if ('no' === Browser.msgBox('Reconcile', 'Another account is currently being reconciled. Do you want to cancel it and reconcile a different account instead?', Browser.Buttons.YES_NO))
-        {
+        if ('no' === Browser.msgBox('Reconcile', 'Another account is currently being reconciled. Do you want to cancel it and reconcile a different account instead?', Browser.Buttons.YES_NO)) {
           return;
         }
       }
@@ -67,7 +70,12 @@ export const Reconcile = {
     }
   },
 
-  continueReconcile(account, accountType, mintAccount, endDate, prevBalance, newBalance) {
+  /**
+   * Called from reconcile_start.html
+   * @param args {{account, accountType, mintAccount, endDate, prevBalance, newBalance}}
+   */
+  continueReconcile(args) {
+    const {account, accountType, mintAccount, endDate, prevBalance, newBalance} = args;
 
     try {
       const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(Const.SHEET_NAME_RECONCILE);
@@ -85,7 +93,7 @@ export const Reconcile = {
       // reconciled yet.
       for (let i = txnDataLen - 1; i >= 0; --i) {
         if (String(txnValues[i][Const.IDX_TXN_ACCOUNT]) === account &&
-            (mintAccount == null || txnValues[i][Const.IDX_TXN_MINT_ACCOUNT] === mintAccount) &&
+            (!mintAccount || txnValues[i][Const.IDX_TXN_MINT_ACCOUNT] === mintAccount) &&
             txnValues[i][Const.IDX_TXN_CLEAR_RECON].toUpperCase() !== 'R' && // Ignore previously reconciled txns
             txnValues[i][Const.IDX_TXN_STATE] !== Const.TXN_STATUS_PENDING)  // Ignore pending txns
         {
@@ -334,7 +342,7 @@ export const Reconcile = {
 
       // Prompt the user to save the changes to Mint
       // DISABLED: because Spreadsheet.show() is not allowed here anymore? Use buttons instead.
-      //Utils.getPrivateCache().put(Const.CACHE_RECONCILE_PARAMS, paramsJson);
+      //Utils.getPrivateCache().put(Const.CACHE_RECONCILE_SUBMIT_PARAMS, paramsJson);
       //const htmlOutput = HtmlService.createTemplateFromFile('reconcile_submit.html').evaluate();
       //htmlOutput.setTitle('Reconcile').setHeight(200).setWidth(300).setSandboxMode(HtmlService.SandboxMode.IFRAME);
       //SpreadsheetApp.getActiveSpreadsheet().show(htmlOutput);
@@ -476,9 +484,41 @@ export const Reconcile = {
 
     paramsCell.setValue('');
   },
-  
+
   Window: {
-    show()
+    show: function() {
+      try
+      {
+        const mintAccounts = Mint.getMintAccounts(null);
+        if (mintAccounts == null || mintAccounts.length === 0) {
+          Browser.msgBox('No Mint accounts were found. Make sure you have imported your transactions from Mint.');
+          return;
+        }
+
+        if (Debug.enabled) Debug.log(mintAccounts);
+
+        const acctInfoMap = Sheets.AccountData.getAccountInfoMap();
+        if (!acctInfoMap) {
+          Browser.msgBox('No accounts were found. Make sure you have imported your accounts from Mint.');
+          return;
+        }
+
+        const args = { mintAccounts , acctInfoMap };
+        Utils.getPrivateCache().put(Const.CACHE_RECONCILE_WINDOW_ARGS, JSON.stringify(args), 60);
+
+        const htmlOutput = HtmlService.createTemplateFromFile('reconcile_start.html').evaluate();
+        htmlOutput.setTitle("Reconcile an Account").setHeight(250).setWidth(365).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        if (ss != null) ss.show(htmlOutput);
+      }
+      catch (e)
+      {
+        Debug.log(Debug.getExceptionInfo(e));
+        Browser.msgBox(e);
+      }
+    },
+
+    showOld()
     {
       const acctInfoMap = Sheets.AccountData.getAccountInfoMap();
       if (acctInfoMap == null) {
@@ -509,7 +549,7 @@ export const Reconcile = {
             balance = reconInfo.balance;
             reconDate = Utilities.formatDate(reconInfo.date, 'GMT', 'M/d/yyyy');
           }
-          
+
           accountList.addItem(name, Utilities.formatString('%s%s%s%s%f%s%s', name, Const.DELIM_2, acctInfoMap[name].type, Const.DELIM_2, balance, Const.DELIM_2, reconDate));
 
           if (firstAcctBalance === null) {

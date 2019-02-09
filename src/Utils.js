@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -121,33 +121,6 @@ export const Utils = {
     return mintAcct;
   },
 
-  getSavedPassword : function() {
-    return Utils.getAccountStats();
-  },
-
-  getAccountStats : function() {
-    var encodedValue = Db.DataStore.getRecord(Const.DSKEY_ACCT_STATS);
-    if (!encodedValue) {
-      return null;
-    }
-
-    var decodedBytes = Utilities.base64Decode(encodedValue);
-    var value = Utilities.newBlob(decodedBytes).getDataAsString();
-    value = value.substr(Const.ACCT_STATS_EXTRA1.length);
-    value = value.substr(0, value.length - Const.ACCT_STATS_EXTRA2.length);
-    return value;
-  },
-  
-  saveAccountStats : function(stats) {
-    if (!stats) {
-      Db.DataStore.removeRecord(Const.DSKEY_ACCT_STATS);
-    }
-    else {
-      var value = Utilities.base64Encode(Const.ACCT_STATS_EXTRA1 + stats + Const.ACCT_STATS_EXTRA2);
-      Db.DataStore.saveRecord(Const.DSKEY_ACCT_STATS, value);
-    }
-  },
-  
   clearCacheEntries : function() {
     var cache = this.getPrivateCache();
     cache.remove(Const.CACHE_ACCOUNT_INFO_MAP);

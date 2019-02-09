@@ -1,0 +1,163 @@
+<!--
+ * Copyright (c) 2013-2019 b3devs@gmail.com
+ * MIT License: https://spdx.org/licenses/MIT.html
+-->
+
+<style>
+.window_area
+{
+  font-family: Calibri;
+  font-size: Medium;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+</style>
+
+<?
+var DELIM_2 = Const.DELIM_2;
+var argsJson = Utils.getPrivateCache().get(Const.CACHE_RECONCILE_WINDOW_ARGS);
+var args = JSON.parse(argsJson);
+var mintAccounts = args.mintAccounts;
+var acctInfoMap = args.acctInfoMap;
+Debug.log('args: ' + argsJson);
+
+const reconcileMap = Sheets.TxnData.getRecentReconcileBalances(null);
+var firstAcctBalance = null;
+var firstAcctDate = '';
+var accountList = [];
+
+Object.keys(acctInfoMap).forEach(function(name) {
+  if (acctInfoMap[name].type === 'bank' || acctInfoMap[name].type === 'credit') {
+    const reconInfo = reconcileMap[name];
+    var balance = 0.00;
+    var reconDate = '';
+    if (reconInfo && (reconInfo.balance || reconInfo.balance === 0)) {
+      balance = reconInfo.balance;
+      reconDate = Utilities.formatDate(reconInfo.date, 'GMT', 'M/d/yyyy');
+    }
+
+    accountList.push({
+      name: name,
+      value: Utilities.formatString('%s%s%s%s%f%s%s', name, Const.DELIM_2, acctInfoMap[name].type, Const.DELIM_2, balance, Const.DELIM_2, reconDate)
+    });
+
+    if (firstAcctBalance === null) {
+      // save balance and date of first list item so we can initialize previousBalance / previousReconDate fields below.
+      firstAcctBalance = balance;
+      firstAcctDate = reconDate;
+    }
+  }
+});
+
+var accountOptions = '';
+accountList.forEach(function(acct) {
+  accountOptions += '<option value="' + acct.value + '">' + acct.name + '</option>';
+});
+
+var mintAccountOptions = '';
+mintAccounts.forEach(function(acct) {
+mintAccountOptions += '<option value="' + acct + '">' + acct + '</option>';
+});
+
+var todayDate = Utilities.formatDate(new Date(), 'GMT', 'yyyy-MM-dd');
+
+if (Debug.enabled) Debug.log('Showing reconcile_start.html');
+?>
+
+<form class='window_area'>
+
+  <table>
+    <tr>
+      <td>Account:</td><td>
+        <select id="accountList">
+          <?!= accountOptions ?>
+        </select>
+      </td>
+    </tr>
+    <tr> <!-- spacer -->
+      <td colspan="2" style="height: 10px"></td>
+    </tr>
+    <tr>
+      <td>End date:</td><td><input id="endDate" type="date" value="<?!= todayDate ?>" style="width: 130px;"/></td>
+    </tr>
+    <tr>
+      <td>Starting balance:</td><td><input id="previousBalance" type="number" value="<?!= firstAcctBalance ?>" style="width: 130px;"/>
+                                    &nbsp;<span id="previousReconDate" style="color:gray"> <?!= firstAcctDate ?> </span></td>
+    </tr>
+    <tr>
+      <td>Ending balance:</td><td><input id="newBalance" type="number" value="" style="width: 130px;"/></td>
+    </tr>
+    <tr> <!-- spacer -->
+      <td colspan="2" style="height: 10px"></td>
+    </tr>
+    <tr>
+      <td>Mint Account:</td><td>
+      <select id="mintAccount">
+        <?!= mintAccountOptions ?>
+      </select>
+    </td>
+    </tr>
+  </table>
+
+  <!-- spacer -->
+  <div style="height: 15px"></div>
+  <div>
+    <p style="text-align: center; margin-bottom: 0;">
+      <input id="ok_button" type="button" value="OK" onclick="onOK();" style="height: 30px; width: 75px;"/>
+      &nbsp;&nbsp;
+      <input id="cancel_button" type="button" value="Cancel" onclick="closeWindow();" style="height: 30px; width: 75px;"/>
+    </p>
+  </div>
+</form>
+
+<script type="text/javascript">
+function onAccountChanged(event) {
+  const selectedValue = event.target.value || '';
+  let prevBalance = 0;
+  let prevDate = 'blah';
+
+  if (selectedValue) {
+    const accountInfo = selectedValue.split('<?!= DELIM_2 ?>');
+    prevBalance = (accountInfo[2] || accountInfo[2] === 0 ? String(accountInfo[2]) : null);
+    prevDate = (accountInfo[3] ? String(accountInfo[3]) : 'None');
+  }
+
+  document.getElementById('previousBalance').value = prevBalance;
+  document.getElementById('previousReconDate').textContent = prevDate;
+}
+
+function onOK() {
+  try
+  {
+    document.getElementById('ok_button').disabled = true;
+
+    const accountInfo = document.getElementById('accountList').value.split('<?!= DELIM_2 ?>');
+
+    const args = {
+      account: accountInfo[0],
+      accountType: accountInfo[1],
+      endDate: document.getElementById('endDate').value,
+      prevBalance: document.getElementById('previousBalance').value,
+      newBalance: document.getElementById('newBalance').value,
+      mintAccount: document.getElementById('mintAccount').value
+    };
+
+    google.script.run.invokeFunction('MojitoLib.Reconcile.continueReconcile', args);
+    setTimeout(function() { closeWindow(); }, 2000);
+  }
+  catch (e)
+  {
+    alert(e.toString());
+  }
+}
+
+function closeWindow() {
+  google.script.host.close();
+}
+
+document.addEventListener('DOMContentLoaded',function() {
+  document.getElementById('accountList').onchange = onAccountChanged;
+},false);
+
+</script>

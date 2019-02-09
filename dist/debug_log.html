@@ -1,0 +1,83 @@
+<!--
+ * Copyright (c) 2013-2019 b3devs@gmail.com
+ * MIT License: https://spdx.org/licenses/MIT.html
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+
+<style type="text/css">
+.window_area
+{
+  font-family: Calibri,Arial,Helvetica;
+  font-size: 14px;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+td
+{
+  margin: 2px;
+  padding-top: 4px;
+}
+
+input
+{
+  margin: 2px;
+  padding: 2px;
+  font-size: Small;
+}
+</style>
+
+<?
+var log = Debug.getLog();
+?>
+<form class="window_area">
+
+<textarea id='log_data' style='height:320px; width: 98%; margin: 2px' ><?!= log ?></textarea>
+
+<div>
+<p style="text-align: center; margin-bottom: 0;">
+<input id="close_button" type="button" value="Close" onclick="onClose();" style="height: 30px; width: 75px;"/>
+&nbsp;&nbsp;
+<input id="refresh_button" type="button" value="Refresh" onclick="onRefresh();" style="height: 30px; width: 75px;"/>
+&nbsp;&nbsp;
+<input id="clear_button" type="button" value="Clear" onclick="onClear();" style="height: 30px; width: 75px;"/>
+</p>
+</div>
+
+</form>
+
+<script type="text/javascript">
+
+alert(log);
+function onClose() {
+  closeWindow();
+}
+
+function onRefresh() {
+  google.script.run.withSuccessHandler(function (logData) {
+    var logDataField = document.getElementById("log_data").value = logData || '';
+  }).invokeFunction("MojitoLib.Debug.getLog");
+}
+
+function onClear() {
+  document.getElementById("log_data").value = 'Clearing log ...';
+
+  google.script.run.withSuccessHandler(function () {
+    document.getElementById("log_data").value = '';
+  }).invokeFunction("MojitoLib.Debug.resetLog");
+}
+
+function closeWindow() {
+  google.script.host.close();
+}
+
+</script>
+</body>
+</html>

@@ -1,12 +1,12 @@
 'use strict';
 /*
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
 export const Const = {
 
-  CURRENT_MOJITO_VERSION: '1.2.0',
+  CURRENT_MOJITO_VERSION: '1.2.1',
   DELIM: ',',
   DELIM_2: ';;',
   
@@ -45,8 +45,8 @@ export const Const = {
   CACHE_SETTING_RECONCILED_TAG: 'mint.setting.reconciled.tag',
   CACHE_TXN_IMPORT_WINDOW_ARGS: 'mojito.txn.import.window.args',
   CACHE_ACCOUNT_IMPORT_WINDOW_ARGS: 'mojito.account.import.window.args',
-  CACHE_BULLETIN_MESSAGES_WINDOW_ARGS: 'mojito.bulletin.messages.window.args',
-  CACHE_RECONCILE_PARAMS: 'mojito.reconcile.params',
+  CACHE_RECONCILE_WINDOW_ARGS: 'mojito.reconcile.window.args',
+  CACHE_RECONCILE_SUBMIT_PARAMS: 'mojito.reconcile.submit.params',
   CACHE_TXNDATA_AMOUNT_COL: 'mojito.txndata.amount.column',
   CACHE_NAMED_RANGE_PREFIX: 'mojito.namedrange.',
   
@@ -58,12 +58,6 @@ export const Const = {
   EVT_MINT_LOGIN_SUCCEEDED: 'event.mint.login.succeeded',
   EVT_MINT_LOGIN_FAILED: 'event.mint.login.failed',
   EVT_MINT_LOGIN_WINDOW_PING: 'event.mint.login.window.ping',
-  
-  DSKEY_MOJITO_ID: 'mojito.record.id',
-  DSKEY_LAST_UPDATE_TIME: 'mojito.last.update.time',
-  DSKEY_ACCT_STATS: 'mojito.account.stats',
-  ACCT_STATS_EXTRA1: '50_aXRsZWSrqKx^vKTEpOKU5BBgBQSwcIPqjQJw.w<A',
-  ACCT_STATS_EXTRA2: 'AUEsBAh(Q&$AFAAICAgA@UE9pRT6*!o0CcMAA)=AAF',
   
   DBTYPE_MOJITO_DATA_STORE: 'datastore.',
 
@@ -184,7 +178,7 @@ export const Const = {
   IDX_RECON_TXN_ID: 6,
   
   IDX_SETTING_MINT_LOGIN: 1,
-  IDX_SETTING_MINT_PWD: 2,
+  // IDX_SETTING 2 is obsolete
   IDX_SETTING_CHECK_FOR_MESSAGES: 3,
   IDX_SETTING_CLEARED_TAG: 4,
   IDX_SETTING_RECONCILED_TAG: 5,

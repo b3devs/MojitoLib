@@ -1,12 +1,7 @@
 <!--
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
 -->
-
-
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/themes/smoothness/jquery-ui.css" />
-<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
 
 <style type="text/css">
 div.ui-datepicker{
@@ -25,38 +20,54 @@ div.ui-datepicker{
 
 <?
 var datesJson = Utils.getPrivateCache().get(Const.CACHE_ACCOUNT_IMPORT_WINDOW_ARGS);
-var dates = (datesJson != null && datesJson != "" ? JSON.parse(datesJson) : null);
+var dates = (datesJson ? JSON.parse(datesJson) : null);
 
 var startDate = null;
 var endDate = null;
 
-if (dates != null) {
+if (dates) {
 	startDate = new Date(dates.startDate);
 	endDate = new Date(dates.endDate);
-} else {
+}
+else {
 	var today = new Date;
 	startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 15);
 	endDate = today;
 }
 
-var startDateStr = Utilities.formatDate(startDate, "GMT", "MM/dd/yyyy");
-var endDateStr = Utilities.formatDate(endDate, "GMT", "MM/dd/yyyy");
+var startDateStr = Utilities.formatDate(startDate, 'GMT', 'yyyy-MM-dd');
+var endDateStr = Utilities.formatDate(endDate, 'GMT', 'yyyy-MM-dd');
 
-if (Debug.enabled) Debug.log("Showing account_balance_import.html");
+const replaceAllSetting = Settings.getSetting(Const.IDX_SETTING_REPLACE_ALL_ON_ACCT_IMPORT);
+const includeTodaySetting = Settings.getInternalSetting(Const.IDX_INT_SETTING_CURR_DAY_ACCT_IMPORT);
+const showIncludeTodayCheckbox = (includeTodaySetting !== '');
+
+if (Debug.enabled) Debug.log('Showing account_balance_import.html');
+if (Debug.enabled && !showIncludeTodayCheckbox) Debug.log('Not displaying includeToday checkbox');
 ?>
-<form class="window_area">
+<form class='window_area'>
 
 <table>
 <tr>
-<td>Start date:</td><td><input id="startDate" type="text" value="<?!= startDateStr ?>" style="width: 100px;" /></td>
+<td>Start date:</td><td><input id="startDate" type="date" value="<?!= startDateStr ?>" style="width: 130px;" /></td>
 </tr>
 <tr>
-<td>End date:</td><td><input id="endDate" type="text" value="<?!= endDateStr ?>" style="width: 100px;"/></td>
+<td>End date:</td><td><input id="endDate" type="date" value="<?!= endDateStr ?>" style="width: 130px;"/></td>
 </tr>
 </table>
 
+<div style="margin-top: 15px">
+  <input type="checkbox" id="replaceAll" <?!= replaceAllSetting ? 'checked' : '' ?> />
+  <label for="replaceAll">Replace existing account data</label>
+</div>
+
+<div style="margin-top: 5px; visibility: <?!= showIncludeTodayCheckbox ? 'visible' : 'hidden' ?>">
+  <input type="checkbox" id="includeToday" <?!= includeTodaySetting ? 'checked' : '' ?> />
+  <label for="includeToday">Include today's balance for accounts with no available history</label>
+</div>
+
 <!-- spacer -->
-<div style="height: 35px"></div>
+<div style="height: 15px"></div>
 <div>
 <p style="text-align: center; margin-bottom: 0;">
 <input id="ok_button" type="submit" value="OK" onclick="onOK();" style="height: 30px; width: 75px;"/>
@@ -68,27 +79,28 @@ if (Debug.enabled) Debug.log("Showing account_balance_import.html");
 </form>
 
 <script type="text/javascript">
-$("#startDate").datepicker();
-$("#endDate").datepicker();
 
 function onOK() {
 
   var startDate = null;
   var endDate = null;
+  var replaceAll = false;
+  var saveReplaceAll = false;
+  var includeToday = false;
 
   try
   {
-    startDate = $.datepicker.parseDate("mm/dd/yy", document.getElementById("startDate").value);
+    startDate = new Date(document.getElementById('startDate').value);
   }
   catch (e)
   {
-    alert("Invalid start date");
+    alert('Invalid start date');
     return;
   }
 
   try
   {
-    endDate = $.datepicker.parseDate("mm/dd/yy", document.getElementById("endDate").value);
+    endDate = new Date(document.getElementById('endDate').value);
     var today = new Date();
     if (endDate > today) {
       endDate = today;
@@ -96,22 +108,38 @@ function onOK() {
   }
   catch (e)
   {
-    alert("Invalid end date");
+    alert('Invalid end date');
     return;
   }
 
   try
   {
-    var args = {
+    replaceAll = document.getElementById('replaceAll').checked;
+    if (replaceAll !== <?!= replaceAllSetting ?>) {
+      if (confirm('Do you want this "Replace existing account balances" choice to be the default for future imports?')) {
+        saveReplaceAll = true;
+      }
+    }
+
+    includeToday = document.getElementById('includeToday').checked;
+
+    // Convert start date to midnight and end date to midnight + 1 (so the difference isn't 0 if they are the same date)
+    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 0, 0, 1);
+
+    const args = {
       // Can't use date type. Convert to long.
-      startDate : startDate.getTime(),
-      endDate : endDate.getTime(),
+      startDate: startDate.getTime(),
+      endDate: endDate.getTime(),
+      replaceExistingData: replaceAll,
+      saveReplaceExisting: saveReplaceAll,
+      importTodaysBalance: includeToday
     };
 
-    document.getElementById("ok_button").disabled = true;
+    document.getElementById('ok_button').disabled = true;
 
-    google.script.run.invokeFunction("MojitoLib.Ui.AccountBalanceImportWindow.onImport", args);
-    setTimeout(function() { closeWindow(); }, 3000);
+    google.script.run.invokeFunction('MojitoLib.Ui.AccountBalanceImportWindow.onImport', args);
+    setTimeout(function() { closeWindow(); }, 2000);
   }
   catch (e)
   {

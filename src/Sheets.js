@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -198,21 +198,26 @@ export const Sheets = {
             if (settingsRange.getRow() <= editRowFirst && editRowLast <= settingsRange.getLastRow()) {
               var rowIndex = editRowFirst - settingsRange.getRow() + 1;
 
-              if (rowIndex === Const.IDX_SETTING_MINT_PWD) {
-                var value = e.value;
-                Utils.saveAccountStats(String(value));
-                if (value) {
-                  e.range.setValue("** Saved **");
-                }
-                else {
-                  if (Debug.enabled) Debug.log("Saved password has been deleted");
-                }
-              } else if (rowIndex === Const.IDX_SETTING_CLEARED_TAG) {
+              if (rowIndex === Const.IDX_SETTING_CLEARED_TAG) {
                 Utils.getPrivateCache().remove(Const.CACHE_SETTING_CLEARED_TAG);
 
+                //TODO: Get this working
+                //if (Settings.getSetting(Const.IDX_SETTING_CLEARED_TAG) && Settings.getSetting(Const.IDX_SETTING_RECONCILED_TAG)) {
+                //  if ('yes' === Browser.msgBox('Apply now', 'Apply the "cleared" and "reconciled" tags to existing transactions?', Browser.Buttons.YES_NO)) {
+                //    Sheets.TxnData.getSheet().activate();
+                //    Sheets.TxnData.applyClearedAndReconciledTags();
+                //  }
+                //}
               } else if (rowIndex === Const.IDX_SETTING_RECONCILED_TAG) {
                 Utils.getPrivateCache().remove(Const.CACHE_SETTING_RECONCILED_TAG);
 
+                //TODO: Get this working
+                //if (Settings.getSetting(Const.IDX_SETTING_CLEARED_TAG) && Settings.getSetting(Const.IDX_SETTING_RECONCILED_TAG)) {
+                //  if ('yes' === Browser.msgBox('Apply now', 'Apply the "cleared" and "reconciled" tags to existing transactions?', Browser.Buttons.YES_NO)) {
+                //    Sheets.TxnData.getSheet().activate();
+                //    Sheets.TxnData.applyClearedAndReconciledTags();
+                //  }
+                //}
               } else if (rowIndex === Const.IDX_SETTING_TXN_AMOUNT_COL) {
                 Utils.getPrivateCache().remove(Const.CACHE_TXNDATA_AMOUNT_COL);
               }
@@ -602,7 +607,6 @@ export const Sheets = {
         if (Debug.traceEnabled) Debug.trace("Validating row %d edit '%s', first col %d, last col %d", editRowNum, editType, updateColFirst, updateColLast);
 
         // Validate the transaction and mark it as "edited" with editType
-        var allTags = "";
         var tagsValidated = false;
 
         for (var colIndex = updateColFirst - 1; colIndex < updateColLast; ++colIndex) {
@@ -634,7 +638,7 @@ export const Sheets = {
               var tagCleared = Mint.getClearedTag();
               var tagReconciled = Mint.getReconciledTag();
               
-              if (colIndex == Const.IDX_TXN_CLEAR_RECON && (tagCleared == null || tagReconciled == null))
+              if (colIndex == Const.IDX_TXN_CLEAR_RECON && (!tagCleared || !tagReconciled))
               {
                 Browser.msgBox("Clear / Reconcile not enabled", "You cannot mark a transaction as cleared (c) or reconciled (R) until you enable this feature by specifying the corresponding tags on the Settings sheet. Refer to the Help sheet for instructions on how to do this.", Browser.Buttons.OK);
                 isValid = false;
@@ -644,28 +648,11 @@ export const Sheets = {
               // Get the reconciled or cleared tags
               var crCell = txnSheet.getRange(editRowNum, Const.IDX_TXN_CLEAR_RECON + 1);
               var crVal = crCell.getValue();
-              var reconciled = (crVal.toUpperCase() === "R");
-              var cleared = (crVal != null && crVal != ""); // "Cleared" is anything other than "R" or empty
-              crVal = null;
-              if (reconciled) {
-                // Reconciled transactions are also 'cleared', so we'll include both tags
-                crVal = tagReconciled + Const.DELIM + tagCleared;
-              }
-              else if (cleared) {
-                crVal = tagCleared;
-              }
-              
-              if (crVal != null) {
-                allTags += crVal + Const.DELIM;
-              }
-              
               var tagsCell = txnSheet.getRange(editRowNum, Const.IDX_TXN_TAGS + 1);
               var tags = tagsCell.getValue();
-              if (tags != null) {
-                allTags += tags;
-              }
 
-              var validationInfo = Mint.validateTags(allTags, true);
+              const tagArray = Mint.composeTxnTagArray(tags, crVal);
+              const validationInfo = Mint.validateTxnTags(tagArray, true);
               
               isValid = validationInfo.isValid;
               if (isValid) {
@@ -1386,6 +1373,46 @@ export const Sheets = {
 
     //-----------------------------------------------------------------------------
     // Sheets.TxnData
+    applyClearedAndReconciledTags: function() {
+      try {
+        const txnRange = Utils.getTxnDataRange();
+        let txnData = txnRange.getValues();
+        const txnDataLen = txnData.length;
+
+        if (Debug.enabled) Debug.log('Applying "cleared" and "reconciled" tags to %s txns', txnDataLen);
+        toast('Updating ' + txnDataLen + ' row(s)');
+        let updatedRowCount = 0;
+
+        for (let i = 0; i < txnDataLen; ++i) {
+          const tags = txnData[i][Const.IDX_TXN_TAGS];
+          const crVal = txnData[i][Const.IDX_TXN_CLEAR_RECON];
+          const tagArray = Mint.composeTxnTagArray(tags, crVal);
+          const validationInfo = Mint.validateTxnTags(tagArray, false);
+
+          if (validationInfo.isValid) {
+            Debug.log('updating row %s', i);
+            // Set Tags field to exact values in Mint (matching upper/lower case)
+            txnData[i][Const.IDX_TXN_TAGS] = validationInfo.tagNames;
+            txnData[i][Const.IDX_TXN_CLEAR_RECON] = (validationInfo.reconciled ? 'R' : (validationInfo.cleared ? 'c' : null));
+            ++updatedRowCount;
+            if (updatedRowCount % 100 === 0) {
+              toast('Updated ' + updatedRowCount + ' of ' + txnDataLen + ' row(s)', '', 2);
+            }
+          }
+        }
+
+        // setValues doesn't seem to work??
+        txnRange.setValues(txnData);
+        toast('Updated ' + updatedRowCount + ' of ' + txnDataLen + ' row(s)', 'Done', 2);
+      }
+      catch (e) {
+        Debug.log(Debug.getExceptionInfo(e));
+        Browser.msgBox("Error: " + e.toString());
+      }
+    },
+
+    //-----------------------------------------------------------------------------
+    // Sheets.TxnData
     findAllTxnRowsUnsorted: function(unsortedTxnValues, arrayLen, colIndexes, values, excludeRow)
     {
       // Return the all matching rows, but skip excludeRow, if specified
@@ -1422,13 +1449,13 @@ export const Sheets = {
         excludeRow = -1;
 
       // Search from startRow to the end
-      for (var i = startRow; i < arrayLen && idx < 0; ++i) {
+      for (let i = startRow; i < arrayLen && idx < 0; ++i) {
         if (i === excludeRow) {
           continue;
         }
 
-        for (var j = 0; j < colCount; ++j) {
-          var colIndex = colIndexes[j];
+        for (let j = 0; j < colCount; ++j) {
+          const colIndex = colIndexes[j];
           if (unsortedTxnValues[i][colIndex] === values[j]) {
             idx = i;
             break;
@@ -1437,13 +1464,13 @@ export const Sheets = {
       }
 
       // Search from startRow to the beginning
-      for (var i = startRow - 1; i >= 0 && idx < 0; --i) {
+      for (let i = startRow - 1; i >= 0 && idx < 0; --i) {
         if (i === excludeRow) {
           continue;
         }
 
-        for (var j = 0; j < colCount; ++j) {
-          var colIndex = colIndexes[j];
+        for (let j = 0; j < colCount; ++j) {
+          const colIndex = colIndexes[j];
           if (unsortedTxnValues[i][colIndex] === values[j]) {
             idx = i;
             break;
@@ -1644,7 +1671,7 @@ export const Sheets = {
           acctInfoMap[name] = acctEntry;
         }
 
-        if (acctInfoMap != null)
+        if (acctInfoMap)
         {
           acctInfoMapJson = JSON.stringify(acctInfoMap);
           if (Debug.enabled) Debug.log("Saving AccountInfo map in cache: %s", acctInfoMapJson);

@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -108,6 +108,9 @@ export const Upgrade = {
 
         //case "1.1.6.3":
         // No auto-upgrade from version 1.1.6.3 to 1.2.0. Various updates to spreadsheet, bug fixes to MojitoLib, plus MojitoLib is now fully open source.
+        case "1.2.0":
+          newVer = this.upgradeFrom_1_2_0(newVer);
+          break;
 
         default:
           throw new Error(`Auto-upgrade from version ${fromVer} to ${toVer} is not supported. Please download the latest version of Mojito instead.`);
@@ -236,6 +239,11 @@ export const Upgrade = {
   upgradeFrom_1_1_5: function(fromVer) {
     // Just a code upgrade. Nothing to do.
     return "1.1.6.3";
+  },
+
+  upgradeFrom_1_2_0: function(fromVer) {
+    // Just a code upgrade. Nothing to do.
+    return "1.2.1";
   },
 
   //--------------------------------------------------------------------------

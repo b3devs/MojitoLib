@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -177,7 +177,7 @@ export const Ui = {
       const cookies = Mint.Session.getCookies(false);
       if (!cookies) {
         Browser.msgBox('Mint authentication expired', 'The Mint authentication token has not been provided or it has expired. Please re-enter the Mint authentication headers then retry the operation.', Browser.Buttons.OK);
-        Debug.log('Showing mint auth ui');
+        Debug.log('No auth cookies found. Showing mint auth ui.');
         Mint.Session.showManualMintAuth();
         return;
       }
@@ -218,7 +218,7 @@ export const Ui = {
             const args = {
                 startDate: acctDateRange.startDate.getTime(),
                 endDate: acctDateRange.endDate.getTime(),
-                replaceExistingData: false,
+                replaceExistingData: false
               };
 
             Ui.AccountBalanceImportWindow.onImport(args);
@@ -447,59 +447,18 @@ export const Ui = {
   
   ///////////////////////////////////////////////////////////////////////////////
   TxnImportWindow: {
-
-    show: function(dates)
-    {
-      // dates = { startDate: <date>, endDate: <date> }
-      const uiApp = UiApp.createApplication().setWidth(250).setHeight(230).setTitle("Import transactions from Mint");
-      
-      const startDateField = uiApp.createDateBox().setName('startDate').setId("start_date");
-      const endDateField = uiApp.createDateBox().setName('endDate').setId("end_date");
-      
-      const grid = uiApp.createGrid(2, 2);
-      grid.setWidget(0, 0, uiApp.createLabel('Start date:'));
-      grid.setWidget(0, 1, startDateField);
-      grid.setWidget(1, 0, uiApp.createLabel('End date:'));
-      grid.setWidget(1, 1, endDateField);
-      
-      const checkboxReplaceData = uiApp.createCheckBox("Replace existing transactions").setName('replaceData').setValue(false).setHeight(30);
-      
-      const btnOk = uiApp.createButton('OK').setId("ok_button").setHeight(30).setWidth(75);
-      btnOk.addClickHandler(uiApp.createClientHandler().forTargets(btnOk).setEnabled(false));
-      btnOk.addClickHandler(uiApp.createServerHandler('TxnImportWindow_onOkClicked').addCallbackElement(grid).addCallbackElement(checkboxReplaceData));
-      const btnCancel = uiApp.createButton('Cancel').setHeight(30).setWidth(75);
-      btnCancel.addClickHandler(uiApp.createServerHandler('TxnImportWindow_onCancelClicked'));
-      
-      const spacerPanel = uiApp.createVerticalPanel().setHeight(30).add(uiApp.createLabel());
-      const vPanel = uiApp.createVerticalPanel();
-      vPanel.add(grid).add(spacerPanel).add(checkboxReplaceData);
-      const buttonPanel = uiApp.createHorizontalPanel().setHeight(100).setWidth("100%");
-      buttonPanel.setVerticalAlignment(UiApp.VerticalAlignment.BOTTOM).setHorizontalAlignment(UiApp.HorizontalAlignment.CENTER);
-      buttonPanel.add(btnOk).add(btnCancel);
-      
-      uiApp.add(vPanel).add(buttonPanel);
-      
-      // Pre-populate some fields
-      const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-      startDateField.setValue(dates.startDate);
-      startDateField.setFocus(true);
-      endDateField.setValue(dates.endDate);
-      checkboxReplaceData.setValue(Settings.getSetting(Const.IDX_SETTING_REPLACE_ALL_ON_TXN_IMPORT) === true);
-
-      // Show the window
-      spreadsheet.show(uiApp);
-    },
-
-    // Html version not being used. Too slow to load jquery.
-    show_html: function(dates) {
-      // dates = { startDate: <date>, endDate: <date> }
+    /**
+     *
+     * @param dates {{ startDate: Date, endDate: Date }}
+     */
+    show: function(dates) {
       try
       {
         const args = { startDate: dates.startDate.getTime(), endDate: dates.endDate.getTime() };
         Utils.getPrivateCache().put(Const.CACHE_TXN_IMPORT_WINDOW_ARGS, JSON.stringify(args), 60);
 
         const htmlOutput = HtmlService.createTemplateFromFile('txn_import.html').evaluate();
-        htmlOutput.setTitle("Import Transactions from Mint").setHeight(235).setWidth(250).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+        htmlOutput.setTitle("Import Transactions from Mint").setHeight(190).setWidth(250).setSandboxMode(HtmlService.SandboxMode.IFRAME);
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         if (ss != null) ss.show(htmlOutput);
       }
@@ -526,132 +485,13 @@ export const Ui = {
       }
 
       toast("Done");
-    },
-
-    //-------------------------------------------------------------------------
-    // Event handlers
-
-    onOkClicked: function(e)
-    {
-      const uiApp = UiApp.getActiveApplication();
-      const startDate = e.parameter.startDate;
-      const endDate = e.parameter.endDate;
-      let validInputs = true;
-
-      if (!(startDate instanceof Date)) {
-        toast("Invalid start date");
-        validInputs = false;
-      }
-      if (!(endDate instanceof Date)) {
-        toast("Invalid end date");
-        validInputs = false;
-      }
-
-      if (!validInputs) {
-        uiApp.getElementById("ok_button").setEnabled(true);
-        return uiApp;
-      }
-
-      const replaceData = (e.parameter.replaceData == "true");
-      if (replaceData !== Settings.getSetting(Const.IDX_SETTING_REPLACE_ALL_ON_TXN_IMPORT)) {
-        if ("yes" === Browser.msgBox("Do you want this \"Replace existing transactions\" choice to be the default for future imports?", Browser.Buttons.YES_NO)) {
-          Settings.setSetting(Const.IDX_SETTING_REPLACE_ALL_ON_TXN_IMPORT, replaceData);
-        }
-      }
-
-      const args = {
-        startDate: startDate.getTime(),
-        endDate: endDate.getTime(),
-        replaceExistingData: replaceData,
-      };
-
-      uiApp.close();
-
-      Ui.TxnImportWindow.onImport(args);
-
-      return uiApp;
-    },
-
-    onCancelClicked: function(e)
-    {
-      const uiApp = UiApp.getActiveApplication();
-      uiApp.close();
-      return uiApp;
     }
+
   },
 
   ///////////////////////////////////////////////////////////////////////////////
   AccountBalanceImportWindow: {
-
-    show: function(dates)
-    {
-      // dates = { startDate: <date>, endDate: <date> }
-      const uiApp = UiApp.createApplication().setWidth(250).setHeight(230).setTitle("Import account balances");
-      
-      const startDateField = uiApp.createDateBox().setName('startDate').setId("start_date");
-      const endDateField = uiApp.createDateBox().setName('endDate').setId("end_date");
-      
-      const grid = uiApp.createGrid(2, 2);
-      grid.setWidget(0, 0, uiApp.createLabel('Start date:'));
-      grid.setWidget(0, 1, startDateField);
-      grid.setWidget(1, 0, uiApp.createLabel('End date:'));
-      grid.setWidget(1, 1, endDateField);
-      
-      const checkboxReplaceData = uiApp.createCheckBox("Replace existing account data").setName('replaceData').setValue(false).setHeight(30);
-      const checkboxImportCurrentDay = uiApp.createCheckBox("Include today's balance for accounts with no available history").setName('includeToday').setHeight(30);
-      const vPanel = uiApp.createVerticalPanel();
-      vPanel.add(grid);
-
-      let okServerClickHandler = uiApp.createServerHandler('AccountBalanceImportWindow_onOkClicked')
-                                      .addCallbackElement(grid)
-                                      .addCallbackElement(checkboxReplaceData);
-
-
-      const includeTodaySetting = Settings.getInternalSetting(Const.IDX_INT_SETTING_CURR_DAY_ACCT_IMPORT);
-      const showIncludeTodayCheckbox = (includeTodaySetting !== "");
-
-      if (showIncludeTodayCheckbox) {
-        // Add "include today's balance" checkbox to UI
-        vPanel.add(uiApp.createLabel().setHeight(10)); // spacer
-        checkboxImportCurrentDay.setValue(includeTodaySetting);
-        vPanel.add(checkboxImportCurrentDay);
-        vPanel.add(uiApp.createLabel().setHeight(10)); // spacer
-        vPanel.add(checkboxReplaceData);
-        vPanel.add(uiApp.createLabel().setHeight(50)); // spacer
-        
-        // Add callback element to click handler
-        okServerClickHandler.addCallbackElement(checkboxImportCurrentDay);
-      } else {
-        vPanel.add(uiApp.createLabel().setHeight(30)); // spacer
-        vPanel.add(checkboxReplaceData);
-        vPanel.add(uiApp.createLabel().setHeight(70)); // spacer
-      }
-
-      const btnOk = uiApp.createButton('OK').setId("ok_button").setHeight(30).setWidth(75);
-      const btnCancel = uiApp.createButton('Cancel').setHeight(30).setWidth(75);
-      const buttonPanel = uiApp.createHorizontalPanel().setHeight(30).setWidth("100%");
-      buttonPanel.setVerticalAlignment(UiApp.VerticalAlignment.BOTTOM).setHorizontalAlignment(UiApp.HorizontalAlignment.CENTER);
-      buttonPanel.add(btnOk).add(btnCancel);
-
-      uiApp.add(vPanel).add(buttonPanel);
-
-      btnOk.addClickHandler(okServerClickHandler);
-      btnOk.addClickHandler(uiApp.createClientHandler().forTargets(btnOk).setEnabled(false));
-      btnCancel.addClickHandler(uiApp.createServerHandler('AccountBalanceImportWindow_onCancelClicked'));
-
-      // Pre-populate some fields
-      const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-      startDateField.setValue(dates.startDate);
-      startDateField.setFocus(true);
-      endDateField.setValue(dates.endDate);
-      checkboxReplaceData.setValue(Settings.getSetting(Const.IDX_SETTING_REPLACE_ALL_ON_ACCT_IMPORT) === true);
-
-      // Show the window
-      spreadsheet.show(uiApp);
-    },
-
-    // Html version not being used. Too slow to load jquery.
-    show_html: function(dates) {
+    show: function(dates) {
       // dates = { startDate: <date>, endDate: <date> }
       try
       {
@@ -659,9 +499,9 @@ export const Ui = {
         Utils.getPrivateCache().put(Const.CACHE_ACCOUNT_IMPORT_WINDOW_ARGS, JSON.stringify(args), 60);
 
         const htmlOutput = HtmlService.createTemplateFromFile('account_balance_import.html').evaluate();
-        htmlOutput.setTitle("Import account balances").setHeight(235).setWidth(250).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+        htmlOutput.setTitle("Import account balances").setHeight(220).setWidth(250).setSandboxMode(HtmlService.SandboxMode.IFRAME);
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        if (ss != null) ss.show(htmlOutput);
+        if (ss) ss.show(htmlOutput);
       }
       catch (e)
       {
@@ -672,19 +512,25 @@ export const Ui = {
 
     /**
      * onImport - Called from account_balance_import.html
-     * args = {
-     *   startDate: <date>,
-     *   endDate: <date>,
-     *   replaceExistingData: true/false,
-     *   importTodaysBalance: undefined/true/false,
-     * }
+     * @param args {{
+     *   startDate: Date,
+     *   endDate: Date,
+     *   replaceExistingData: boolean,
+     *   saveReplaceExisting: boolean,
+     *   importTodaysBalance: undefined|boolean,
+     *   }}
      */
     onImport: function(args) {
       try
       {
         if (Debug.enabled) Debug.log("AccountBalanceImportWindow.onImport(): %s", args.toSource());
+
         const cookies = Mint.Session.getCookies();
         const acctInfoArray = Mint.AccountData.downloadAccountInfo();
+
+        if (args.saveReplaceExisting) {
+          Settings.setSetting(Const.IDX_SETTING_REPLACE_ALL_ON_ACCT_IMPORT, args.replaceExistingData);
+        }
 
         // Clear the existing account data, if requested
         if (args.replaceExistingData === true) {
@@ -779,71 +625,8 @@ export const Ui = {
       }
 
       toast("Done", "Account balance import");
-    },
-
-    //-----------------------------------------------------------------------------
-    // Event handlers
-
-    onOkClicked: function(e)
-    {
-      const uiApp = UiApp.getActiveApplication();
-      let startDate = e.parameter.startDate;
-      let endDate = e.parameter.endDate;
-      let validInputs = true;
-
-      if (!(startDate instanceof Date)) {
-        toast("Invalid start date");
-        validInputs = false;
-      }
-      if (!(endDate instanceof Date)) {
-        toast("Invalid end date");
-        validInputs = false;
-      }
-
-      if (!validInputs) {
-        uiApp.getElementById("ok_button").setEnabled(true);
-        return uiApp;
-      }
-
-      const replaceData = (e.parameter.replaceData == "true");
-      if (replaceData !== Settings.getSetting(Const.IDX_SETTING_REPLACE_ALL_ON_ACCT_IMPORT)) {
-        if ("yes" === Browser.msgBox("Do you want this \"Replace existing account balances\" choice to be the default for future imports?", Browser.Buttons.YES_NO)) {
-          Settings.setSetting(Const.IDX_SETTING_REPLACE_ALL_ON_ACCT_IMPORT, replaceData);
-        }
-      }
-
-      // Convert start date to midnight and end date to midnight + 1 (so the difference isn't 0 if they are the same date)
-      startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-      endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 0, 0, 1);
-
-      const args = {
-        startDate: startDate.getTime(),
-        endDate: endDate.getTime(),
-        replaceExistingData: replaceData,
-      };
-
-      //Debug.log("e.parameter.replaceData = " + e.parameter.replaceData);
-      //Debug.log("e.parameter.includeToday = " + e.parameter.includeToday);
-      if (e.parameter.includeToday != undefined) {
-        args.importTodaysBalance = (e.parameter.includeToday == "true");
-        Debug.log("Import today's balance for accounts with no balance history: %s", args.importTodaysBalance);
-      } else {
-        Debug.log("includeToday is undefined");
-      }
-
-      uiApp.close();
-
-      Ui.AccountBalanceImportWindow.onImport(args);
-
-      return uiApp;
-    },
-
-    onCancelClicked: function(e)
-    {
-      const uiApp = UiApp.getActiveApplication();
-      uiApp.close();
-      return uiApp;
     }
+
   }
 
 };

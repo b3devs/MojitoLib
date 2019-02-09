@@ -1,5 +1,5 @@
 <!--
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
 -->
 
@@ -13,14 +13,13 @@
   overflow: auto;
 }
 </style>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 
 <?
-var paramsJson = Utils.getPrivateCache().get(Const.CACHE_RECONCILE_PARAMS);
+var paramsJson = Utils.getPrivateCache().get(Const.CACHE_RECONCILE_SUBMIT_PARAMS);
 Debug.log("paramsJson: %s", paramsJson);
 var reconcileParams = JSON.parse(paramsJson);
 
-Utils.getPrivateCache().remove(Const.CACHE_RECONCILE_PARAMS);
+Utils.getPrivateCache().remove(Const.CACHE_RECONCILE_SUBMIT_PARAMS);
 ?>
 <div class="msg_area">
 <p>Account "<?!= reconcileParams.account ?>" was successfully reconciled.</p>

@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Copyright (c) 2013-2018 b3devs@gmail.com
+ * Copyright (c) 2013-2019 b3devs@gmail.com
  * MIT License: https://spdx.org/licenses/MIT.html
  */
 
@@ -92,7 +92,7 @@ export const Db = {
     },
 
     removeRecord(key) {
-      if (Debug.enabled) { if (key !== Const.DSKEY_ACCT_STATS) Debug.log("Removing datastore key: %s", key); }
+      if (Debug.enabled) { Debug.log("Removing datastore key: %s", key); }
       var propKey = Const.DBTYPE_MOJITO_DATA_STORE + key;
       Db.remove(propKey);
     },
