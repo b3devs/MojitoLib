@@ -1,3 +1,5 @@
+## NOTICE:  MojitoLib is obsolete and has been replaced by [MojitoLib2](https://github.com/b3devs/MojitoLib2)
+----
 # MojitoLib
 **Google Apps Script library for the [Mojito spreadsheet](http://b3devs.blogspot.com/p/about-mojito.html)**
 
